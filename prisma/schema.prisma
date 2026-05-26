@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts  Account[]
+  sessions  Session[]
+  projects  Project[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  apiKey      String   @unique @default(cuid())
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  config        ProjectConfig?
+  knowledgeDocs KnowledgeDoc[]
+  chatSessions  ChatSession[]
+}
+
+model ProjectConfig {
+  id             String  @id @default(cuid())
+  projectId      String  @unique
+  primaryColor   String  @default("#6366f1")
+  secondaryColor String  @default("#f1f5f9")
+  textColor      String  @default("#1e293b")
+  botName        String  @default("Assistant")
+  welcomeMessage String  @default("Hi! How can I help you today?")
+  placeholder    String  @default("Type a message...")
+  avatarUrl      String?
+  position       String  @default("bottom-right")
+  systemPrompt   String  @default("You are a helpful assistant.")
+  groqModel      String  @default("llama-3.3-70b-versatile")
+  temperature    Float   @default(0.7)
+  maxTokens      Int     @default(1024)
+  widgetWidth    Int     @default(380)
+  widgetHeight   Int     @default(560)
+  showBranding   Boolean @default(true)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model KnowledgeDoc {
+  id        String   @id @default(cuid())
+  projectId String
+  title     String
+  content   String
+  source    String?
+  type      String   @default("text")
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  projectId String
+  visitorId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
