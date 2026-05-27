@@ -19,12 +19,7 @@ export default async function LandingPage() {
           <Link href="/login" className="text-slate-600 hover:text-slate-900 text-sm font-medium">
             Sign in
           </Link>
-          <Link
-            href="/register"
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-          >
-            Get started free
-          </Link>
+         
         </div>
       </header>
 
@@ -44,12 +39,7 @@ export default async function LandingPage() {
             with a single script tag. No infrastructure required.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Link
-              href="/register"
-              className="bg-indigo-600 text-white px-8 py-3.5 rounded-xl text-base font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-            >
-              Create your first chatbot
-            </Link>
+           
             <Link href="/login" className="text-slate-600 hover:text-slate-900 text-base font-medium">
               Sign in →
             </Link>
