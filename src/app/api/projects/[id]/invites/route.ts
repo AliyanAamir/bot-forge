@@ -15,12 +15,20 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params;
   const role = await getProjectRole(id, session.user.id);
-  if (!can(role, "view")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!can(role, "manageTeam")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const invites = await db.invite.findMany({
     where: { projectId: id, acceptedAt: null },
     orderBy: { createdAt: "desc" },
-    include: { invitedBy: { select: { name: true, email: true } } },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      token: true,
+      expiresAt: true,
+      createdAt: true,
+      invitedBy: { select: { name: true, email: true } },
+    },
   });
   return NextResponse.json(invites);
 }

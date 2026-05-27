@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { hasProjectAccess, getProjectRole } from "@/lib/project-access";
+import { can } from "@/lib/permissions";
 import { TeamManager } from "@/components/project/TeamManager";
 
 export default async function TeamPage({ params }: { params: Promise<{ id: string }> }) {
@@ -11,6 +12,9 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
   const access = await hasProjectAccess(id, session!.user.id);
   if (!access) notFound();
 
+  const role = await getProjectRole(id, session!.user.id);
+  const canManage = can(role, "manageTeam");
+
   const project = await db.project.findUnique({
     where: { id },
     include: {
@@ -19,16 +23,17 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
         include: { user: { select: { id: true, name: true, email: true } } },
         orderBy: { createdAt: "asc" },
       },
-      invites: {
-        where: { acceptedAt: null },
-        orderBy: { createdAt: "desc" },
-        include: { invitedBy: { select: { name: true, email: true } } },
-      },
     },
   });
   if (!project) notFound();
 
-  const role = await getProjectRole(id, session!.user.id);
+  const invites = canManage
+    ? await db.invite.findMany({
+        where: { projectId: id, acceptedAt: null },
+        orderBy: { createdAt: "desc" },
+        include: { invitedBy: { select: { name: true, email: true } } },
+      })
+    : [];
 
   return (
     <div>
@@ -48,7 +53,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
           createdAt: m.createdAt.toISOString(),
           user: m.user,
         }))}
-        invites={project.invites.map((i) => ({
+        invites={invites.map((i) => ({
           id: i.id,
           email: i.email,
           role: i.role,
