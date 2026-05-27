@@ -7,7 +7,12 @@ import { CreateProjectButton } from "@/components/dashboard/CreateProjectButton"
 export default async function DashboardPage() {
   const session = await auth();
   const projects = await db.project.findMany({
-    where: { userId: session!.user.id },
+    where: {
+      OR: [
+        { userId: session!.user.id },
+        { members: { some: { userId: session!.user.id } } },
+      ],
+    },
     include: {
       config: true,
       _count: { select: { knowledgeDocs: true, chatSessions: true } },

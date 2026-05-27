@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getProjectRole } from "@/lib/project-access";
+import { can } from "@/lib/permissions";
 
 async function getProjectForUser(id: string, userId: string) {
   return db.project.findFirst({
-    where: { id, userId },
+    where: {
+      id,
+      OR: [{ userId }, { members: { some: { userId } } }],
+    },
     include: {
       config: true,
       _count: { select: { knowledgeDocs: true, chatSessions: true } },
@@ -31,6 +36,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const project = await getProjectForUser(id, session.user.id);
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const role = await getProjectRole(id, session.user.id);
+  if (!can(role, "editContent")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { name, description, config } = body;
 
@@ -54,8 +64,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const project = await getProjectForUser(id, session.user.id);
-  if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const project = await db.project.findFirst({ where: { id, userId: session.user.id } });
+  if (!project) return NextResponse.json({ error: "Only the owner can delete a project" }, { status: 403 });
 
   await db.project.delete({ where: { id } });
   return NextResponse.json({ success: true });

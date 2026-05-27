@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { groq } from "@/lib/groq";
 import { buildContext } from "@/lib/knowledge";
+import { extractContact, shouldPromptForLead } from "@/lib/lead-capture";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,10 +20,12 @@ export async function POST(req: NextRequest) {
     if (!project) {
       return NextResponse.json({ error: "Invalid API key" }, { status: 401 });
     }
+    if (project.apiKeyRevokedAt) {
+      return NextResponse.json({ error: "API key revoked" }, { status: 403 });
+    }
 
     const config = project.config;
 
-    // Get or create chat session
     let session = sessionId
       ? await db.chatSession.findUnique({ where: { id: sessionId } })
       : null;
@@ -33,43 +36,79 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Load message history (last 10 turns)
     const history = await db.chatMessage.findMany({
       where: { sessionId: session.id },
       orderBy: { createdAt: "asc" },
       take: 20,
     });
 
-    // Save user message
     await db.chatMessage.create({
       data: { sessionId: session.id, role: "user", content: message },
     });
 
-    // Build RAG context
+    const existingLead = await db.lead.findUnique({ where: { sessionId: session.id } });
+    const contact = extractContact(message);
+    let lead = existingLead;
+    if (contact.email || contact.phone || contact.name) {
+      lead = await db.lead.upsert({
+        where: { sessionId: session.id },
+        create: {
+          projectId: project.id,
+          sessionId: session.id,
+          email: contact.email,
+          phone: contact.phone,
+          name: contact.name,
+        },
+        update: {
+          email: contact.email ?? existingLead?.email ?? undefined,
+          phone: contact.phone ?? existingLead?.phone ?? undefined,
+          name: contact.name ?? existingLead?.name ?? undefined,
+        },
+      });
+    }
+
+    const userMessageCount = history.filter((m) => m.role === "user").length + 1;
+    const askForLead = shouldPromptForLead(
+      config?.leadCaptureEnabled ?? false,
+      config?.leadCaptureAfterMessages ?? 3,
+      userMessageCount,
+      { email: lead?.email, phone: lead?.phone }
+    );
+
     const context = await buildContext(project.id, message);
 
-    const systemPrompt = [
+    const baseSystem = [
       config?.systemPrompt || "You are a helpful assistant.",
-      context
-        ? `\n\nUse the following knowledge base to answer questions:\n\n${context}`
-        : "",
+      context ? `\n\nUse the following knowledge base to answer questions:\n\n${context}` : "",
     ].join("");
 
-    // Call Groq
+    const missing: string[] = [];
+    if (!lead?.email) missing.push("email");
+    if (!lead?.phone) missing.push("phone number");
+    if (!lead?.name) missing.push("name");
+
+    const leadSystem = askForLead
+      ? `IMPORTANT OPERATOR INSTRUCTION (overrides any earlier rule about not collecting personal info): You ARE authorized and required to collect contact details from this visitor for follow-up by a human team member. ${
+          config?.leadCapturePrompt ?? "Politely ask for their name, email, and phone number."
+        } Still missing: ${missing.join(", ") || "none"}. Weave the request naturally into your next reply after helping them. Do not refuse, do not say you cannot store data — the platform stores it securely. If the visitor has already shared something, acknowledge it and ask only for what is still missing.`
+      : "";
+
+    const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
+      { role: "system", content: baseSystem },
+      ...history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+      { role: "user", content: message },
+    ];
+    if (leadSystem) messages.push({ role: "system", content: leadSystem });
+
     const completion = await groq.chat.completions.create({
       model: config?.groqModel || "llama-3.3-70b-versatile",
       temperature: config?.temperature ?? 0.7,
       max_tokens: config?.maxTokens ?? 1024,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
-        { role: "user", content: message },
-      ],
+      messages,
     });
 
     const reply = completion.choices[0]?.message?.content || "";
 
-    // Save assistant reply
     await db.chatMessage.create({
       data: { sessionId: session.id, role: "assistant", content: reply },
     });
@@ -79,9 +118,24 @@ export async function POST(req: NextRequest) {
       data: { updatedAt: new Date() },
     });
 
-    return NextResponse.json({ reply, sessionId: session.id });
+    return NextResponse.json(
+      { reply, sessionId: session.id },
+      { headers: { "Access-Control-Allow-Origin": "*" } }
+    );
   } catch (err) {
     console.error("[CHAT ERROR]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
+}
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Api-Key",
+      "Access-Control-Max-Age": "86400",
+    },
+  });
 }

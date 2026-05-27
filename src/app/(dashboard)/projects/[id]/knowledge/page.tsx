@@ -10,7 +10,7 @@ export default async function KnowledgePage({ params }: { params: Promise<{ id: 
   const { id } = await params;
 
   const project = await db.project.findFirst({
-    where: { id, userId: session!.user.id },
+    where: { id, OR: [{ userId: session!.user.id }, { members: { some: { userId: session!.user.id } } }] },
   });
 
   if (!project) notFound();

@@ -1,0 +1,63 @@
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { notFound } from "next/navigation";
+import { hasProjectAccess, getProjectRole } from "@/lib/project-access";
+import { TeamManager } from "@/components/project/TeamManager";
+
+export default async function TeamPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  const { id } = await params;
+
+  const access = await hasProjectAccess(id, session!.user.id);
+  if (!access) notFound();
+
+  const project = await db.project.findUnique({
+    where: { id },
+    include: {
+      user: { select: { id: true, name: true, email: true } },
+      members: {
+        include: { user: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: "asc" },
+      },
+      invites: {
+        where: { acceptedAt: null },
+        orderBy: { createdAt: "desc" },
+        include: { invitedBy: { select: { name: true, email: true } } },
+      },
+    },
+  });
+  if (!project) notFound();
+
+  const role = await getProjectRole(id, session!.user.id);
+
+  return (
+    <div>
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Team</h1>
+        <p className="text-slate-500 text-sm mt-1">Invite collaborators to work on this project.</p>
+      </header>
+
+      <TeamManager
+        projectId={id}
+        currentUserId={session!.user.id}
+        viewerRole={role}
+        owner={project.user}
+        members={project.members.map((m) => ({
+          id: m.id,
+          role: m.role,
+          createdAt: m.createdAt.toISOString(),
+          user: m.user,
+        }))}
+        invites={project.invites.map((i) => ({
+          id: i.id,
+          email: i.email,
+          role: i.role,
+          token: i.token,
+          expiresAt: i.expiresAt.toISOString(),
+          createdAt: i.createdAt.toISOString(),
+          invitedBy: i.invitedBy,
+        }))}
+      />
+    </div>
+  );
+}

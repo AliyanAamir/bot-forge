@@ -10,7 +10,7 @@ export default async function ConfigPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
 
   const project = await db.project.findFirst({
-    where: { id, userId: session!.user.id },
+    where: { id, OR: [{ userId: session!.user.id }, { members: { some: { userId: session!.user.id } } }] },
     include: { config: true },
   });
 

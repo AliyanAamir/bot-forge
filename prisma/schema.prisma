@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {
@@ -13,12 +13,15 @@ model User {
   emailVerified DateTime?
   password      String?
   image         String?
+  role          String    @default("user")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   accounts  Account[]
   sessions  Session[]
   projects  Project[]
+  memberships ProjectMember[]
+  sentInvites Invite[]
 }
 
 model Account {
@@ -58,18 +61,53 @@ model VerificationToken {
 }
 
 model Project {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  apiKey      String   @unique @default(cuid())
-  userId      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  apiKey          String    @unique @default(cuid())
+  apiKeyRotatedAt DateTime?
+  apiKeyRevokedAt DateTime?
+  userId          String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   config        ProjectConfig?
   knowledgeDocs KnowledgeDoc[]
   chatSessions  ChatSession[]
+  leads         Lead[]
+  members       ProjectMember[]
+  invites       Invite[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Invite {
+  id          String    @id @default(cuid())
+  projectId   String
+  email       String
+  token       String    @unique
+  role        String    @default("member")
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  invitedById String
+  createdAt   DateTime  @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy User    @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([projectId, email])
 }
 
 model ProjectConfig {
@@ -82,6 +120,7 @@ model ProjectConfig {
   welcomeMessage String  @default("Hi! How can I help you today?")
   placeholder    String  @default("Type a message...")
   avatarUrl      String?
+  iconKey        String  @default("bot")
   position       String  @default("bottom-right")
   systemPrompt   String  @default("You are a helpful assistant.")
   groqModel      String  @default("llama-3.3-70b-versatile")
@@ -90,6 +129,9 @@ model ProjectConfig {
   widgetWidth    Int     @default(380)
   widgetHeight   Int     @default(560)
   showBranding   Boolean @default(true)
+  leadCaptureEnabled       Boolean @default(false)
+  leadCaptureAfterMessages Int     @default(3)
+  leadCapturePrompt        String  @default("After helping the visitor, politely ask for their name, email, and phone number so a team member can follow up.")
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
@@ -115,6 +157,23 @@ model ChatSession {
 
   project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
+  lead     Lead?
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  projectId String
+  sessionId String   @unique
+  name      String?
+  email     String?
+  phone     String?
+  status    String   @default("new")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 model ChatMessage {

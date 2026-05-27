@@ -82,10 +82,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-sm text-slate-500 mt-6">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-indigo-600 font-medium hover:underline">
-            Sign up free
-          </Link>
+          Access to BotForge is invite-only. Ask your team admin for an invitation.
         </p>
       </div>
     </div>

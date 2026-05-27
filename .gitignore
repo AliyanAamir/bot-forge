@@ -46,3 +46,9 @@ next-env.d.ts
 *.db
 *.db-shm
 *.db-wal
+
+# OMC orchestration state
+.omc/
+
+# Alt lockfiles (canonical = package-lock.json)
+pnpm-lock.yaml

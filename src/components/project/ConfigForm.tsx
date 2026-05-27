@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { IconPicker } from "./IconPicker";
+import type { BotIconKey } from "@/lib/bot-icons";
 
 interface ProjectConfig {
   primaryColor: string;
@@ -11,6 +13,7 @@ interface ProjectConfig {
   welcomeMessage: string;
   placeholder: string;
   position: string;
+  iconKey: string;
   systemPrompt: string;
   groqModel: string;
   temperature: number;
@@ -18,6 +21,9 @@ interface ProjectConfig {
   widgetWidth: number;
   widgetHeight: number;
   showBranding: boolean;
+  leadCaptureEnabled: boolean;
+  leadCaptureAfterMessages: number;
+  leadCapturePrompt: string;
 }
 
 interface Props {
@@ -38,6 +44,7 @@ export function ConfigForm({ projectId, config, models }: Props) {
     welcomeMessage: config?.welcomeMessage ?? "Hi! How can I help you today?",
     placeholder: config?.placeholder ?? "Type a message...",
     position: config?.position ?? "bottom-right",
+    iconKey: config?.iconKey ?? "bot",
     systemPrompt: config?.systemPrompt ?? "You are a helpful assistant.",
     groqModel: config?.groqModel ?? models[0]?.id ?? "",
     temperature: config?.temperature ?? 0.7,
@@ -45,6 +52,11 @@ export function ConfigForm({ projectId, config, models }: Props) {
     widgetWidth: config?.widgetWidth ?? 380,
     widgetHeight: config?.widgetHeight ?? 560,
     showBranding: config?.showBranding ?? true,
+    leadCaptureEnabled: config?.leadCaptureEnabled ?? false,
+    leadCaptureAfterMessages: config?.leadCaptureAfterMessages ?? 3,
+    leadCapturePrompt:
+      config?.leadCapturePrompt ??
+      "After helping the visitor, politely ask for their name, email, and phone number so a team member can follow up.",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -129,6 +141,15 @@ export function ConfigForm({ projectId, config, models }: Props) {
                 className="flex-1 px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
               />
             </div>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">Bot Icon</label>
+            <p className="text-xs text-slate-500 mb-3">Shown on the floating chat button. Tinted with your primary color.</p>
+            <IconPicker
+              value={form.iconKey}
+              color={form.primaryColor}
+              onChange={(k: BotIconKey) => set("iconKey", k)}
+            />
           </div>
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Welcome Message</label>
@@ -218,6 +239,52 @@ export function ConfigForm({ projectId, config, models }: Props) {
               onChange={(e) => set("systemPrompt", e.target.value)}
               rows={4}
               className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Lead capture */}
+      <section className="bg-white border border-slate-200 rounded-2xl p-6">
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <h2 className="font-semibold text-slate-800">Lead Capture</h2>
+            <p className="text-xs text-slate-500 mt-1">Let the bot ask for email + phone after solving a query.</p>
+          </div>
+          <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.leadCaptureEnabled}
+              onChange={(e) => set("leadCaptureEnabled", e.target.checked)}
+              className="w-4 h-4 text-indigo-600 rounded"
+            />
+            <span className="text-sm font-medium text-slate-700">Enabled</span>
+          </label>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Ask after (user messages): <span className="font-mono text-indigo-600">{form.leadCaptureAfterMessages}</span>
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="10"
+              step="1"
+              value={form.leadCaptureAfterMessages}
+              onChange={(e) => set("leadCaptureAfterMessages", parseInt(e.target.value))}
+              className="w-full"
+              disabled={!form.leadCaptureEnabled}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Capture Prompt</label>
+            <textarea
+              value={form.leadCapturePrompt}
+              onChange={(e) => set("leadCapturePrompt", e.target.value)}
+              rows={3}
+              disabled={!form.leadCaptureEnabled}
+              className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none disabled:bg-slate-50 disabled:text-slate-400"
             />
           </div>
         </div>
