@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { db } from "@/lib/db";
-import { generateApiKey } from "@/lib/utils";
+import { sendWelcomeEmail, sendVerificationEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,6 +26,19 @@ export async function POST(req: NextRequest) {
       data: { name, email, password: hashed },
       select: { id: true, email: true, name: true },
     });
+
+    // Create verification token (24h)
+    const token = crypto.randomBytes(32).toString("hex");
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await db.verificationToken.create({
+      data: { identifier: email, token, expires },
+    });
+
+    // Fire emails (non-blocking — don't fail registration if email fails)
+    Promise.all([
+      sendWelcomeEmail(email, name ?? ""),
+      sendVerificationEmail(email, token),
+    ]).catch((err) => console.error("[EMAIL]", err));
 
     return NextResponse.json(user, { status: 201 });
   } catch {
