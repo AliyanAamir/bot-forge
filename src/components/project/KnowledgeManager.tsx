@@ -1,71 +1,59 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useKnowledge, useAddKnowledge, useDeleteKnowledge, PAGE_SIZE } from "@/lib/api/hooks";
+import { qk } from "@/lib/api/keys";
+import { apiGet, listQuery } from "@/lib/api/client";
+import type { Paginated, KnowledgeListItem } from "@/lib/api/types";
+import { usePageParam, ClientPager } from "@/components/ui/ClientPager";
+import { ListSkeleton } from "@/components/ui/Skeleton";
+import { QueryError } from "@/components/ui/QueryState";
 import { formatDate } from "@/lib/utils";
 import { Plus, Trash2, FileText, Loader2, Inbox, ExternalLink } from "lucide-react";
 
-interface Doc {
-  id: string;
-  title: string;
-  content: string;
-  source: string | null;
-  type: string;
-  createdAt: string;
-}
-
-interface Props {
-  projectId: string;
-  initialDocs: Doc[];
-}
-
 const TYPES = ["text", "faq", "policy", "guide"];
 
-export function KnowledgeManager({ projectId, initialDocs }: Props) {
-  const router = useRouter();
-  const [docs, setDocs] = useState<Doc[]>(initialDocs);
+export function KnowledgeManager({ projectId }: { projectId: string }) {
+  const page = usePageParam();
+  const qc = useQueryClient();
+  const { data, isPending, isError, error, refetch, isPlaceholderData } = useKnowledge(projectId, page);
+  const addDoc = useAddKnowledge(projectId);
+  const deleteDoc = useDeleteKnowledge(projectId, page);
+
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [source, setSource] = useState("");
   const [type, setType] = useState("text");
-  const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-
-    const res = await fetch(`/api/knowledge/${projectId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, content, source, type }),
-    });
-
-    if (res.ok) {
-      const doc = await res.json();
-      setDocs((prev) => [{ ...doc, createdAt: doc.createdAt }, ...prev]);
-      setTitle("");
-      setContent("");
-      setSource("");
-      setType("text");
-      setShowForm(false);
+  const totalPages = data?.totalPages ?? 1;
+  useEffect(() => {
+    if (page < totalPages) {
+      qc.prefetchQuery({
+        queryKey: qk.knowledge(projectId, page + 1),
+        queryFn: () =>
+          apiGet<Paginated<KnowledgeListItem>>(
+            `/api/knowledge/${projectId}${listQuery({ page: page + 1, pageSize: PAGE_SIZE })}`,
+          ),
+      });
     }
+  }, [page, totalPages, projectId, qc]);
 
-    setSaving(false);
-    router.refresh();
-  }
-
-  async function handleDelete(docId: string) {
-    setDeletingId(docId);
-    await fetch(`/api/knowledge/${projectId}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ docId }),
-    });
-    setDocs((prev) => prev.filter((d) => d.id !== docId));
-    setDeletingId(null);
-    router.refresh();
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    addDoc.mutate(
+      { title, content, source, type },
+      {
+        onSuccess: () => {
+          setTitle("");
+          setContent("");
+          setSource("");
+          setType("text");
+          setShowForm(false);
+        },
+      },
+    );
   }
 
   return (
@@ -77,6 +65,11 @@ export function KnowledgeManager({ projectId, initialDocs }: Props) {
             <h2 className="font-semibold text-ink">Add knowledge entry</h2>
           </div>
           <form onSubmit={handleAdd} className="panel-pad space-y-4">
+            {addDoc.isError && (
+              <div className="badge-danger rounded-lg border px-4 py-3 text-sm font-medium w-full block">
+                {addDoc.error.message}
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="kb-title" className="label">Title <span className="text-ember">*</span></label>
@@ -101,8 +94,8 @@ export function KnowledgeManager({ projectId, initialDocs }: Props) {
             </div>
             <div className="flex gap-3">
               <button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">Cancel</button>
-              <button type="submit" disabled={saving} className="btn btn-primary">
-                {saving ? (<><Loader2 className="size-4 animate-spin" /> Saving...</>) : "Add to knowledge base"}
+              <button type="submit" disabled={addDoc.isPending} className="btn btn-primary">
+                {addDoc.isPending ? (<><Loader2 className="size-4 animate-spin" /> Saving...</>) : "Add to knowledge base"}
               </button>
             </div>
           </form>
@@ -121,7 +114,11 @@ export function KnowledgeManager({ projectId, initialDocs }: Props) {
       )}
 
       {/* Doc list */}
-      {docs.length === 0 ? (
+      {isPending ? (
+        <ListSkeleton rows={5} />
+      ) : isError ? (
+        <QueryError message={error.message} onRetry={() => refetch()} />
+      ) : data.total === 0 ? (
         <div className="panel flex flex-col items-center text-center px-6 py-14">
           <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-sunk text-faint mb-3">
             <Inbox className="size-6" strokeWidth={1.5} />
@@ -130,40 +127,55 @@ export function KnowledgeManager({ projectId, initialDocs }: Props) {
           <p className="text-muted text-sm mt-1">Add your first knowledge entry above.</p>
         </div>
       ) : (
-        <div className="panel divide-y divide-line overflow-hidden">
-          {docs.map((doc) => (
-            <div key={doc.id} className="flex items-start gap-4 px-5 py-4">
-              <span className="shrink-0 inline-flex size-9 items-center justify-center rounded-lg bg-ember-soft text-ember-strong">
-                <FileText className="size-4" strokeWidth={1.75} />
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-ink truncate">{doc.title}</h3>
-                  <span className="badge badge-neutral capitalize shrink-0">{doc.type}</span>
+        <>
+          <div className={`panel divide-y divide-line overflow-hidden ${isPlaceholderData ? "opacity-60 transition-opacity" : "transition-opacity"}`}>
+            {data.data.map((doc) => {
+              const deleting = deleteDoc.isPending && deleteDoc.variables === doc.id;
+              return (
+                <div key={doc.id} className="flex items-start gap-4 px-5 py-4">
+                  <span className="shrink-0 inline-flex size-9 items-center justify-center rounded-lg bg-ember-soft text-ember-strong">
+                    <FileText className="size-4" strokeWidth={1.75} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-ink truncate">{doc.title}</h3>
+                      <span className="badge badge-neutral capitalize shrink-0">{doc.type}</span>
+                    </div>
+                    <p className="text-muted text-sm mt-1 line-clamp-2">{doc.content}</p>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-faint">
+                      <span>{formatDate(doc.createdAt)}</span>
+                      <span>{doc.content.length} chars</span>
+                      {doc.source && (
+                        <a href={doc.source} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-ember-strong hover:underline max-w-[220px] truncate">
+                          <ExternalLink className="size-3 shrink-0" strokeWidth={1.75} />
+                          <span className="truncate">{doc.source}</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => deleteDoc.mutate(doc.id)}
+                    disabled={deleting}
+                    className="btn btn-ghost btn-icon shrink-0 hover:text-danger"
+                    aria-label="Delete entry"
+                  >
+                    {deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" strokeWidth={1.75} />}
+                  </button>
                 </div>
-                <p className="text-muted text-sm mt-1 line-clamp-2">{doc.content}</p>
-                <div className="flex items-center gap-3 mt-2 text-xs text-faint">
-                  <span>{formatDate(doc.createdAt)}</span>
-                  <span>{doc.content.length} chars</span>
-                  {doc.source && (
-                    <a href={doc.source} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-ember-strong hover:underline max-w-[220px] truncate">
-                      <ExternalLink className="size-3 shrink-0" strokeWidth={1.75} />
-                      <span className="truncate">{doc.source}</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => handleDelete(doc.id)}
-                disabled={deletingId === doc.id}
-                className="btn btn-ghost btn-icon shrink-0 hover:text-danger"
-                aria-label="Delete entry"
-              >
-                {deletingId === doc.id ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" strokeWidth={1.75} />}
-              </button>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+
+          <ClientPager
+            page={page}
+            totalPages={data.totalPages}
+            total={data.total}
+            pageSize={data.pageSize}
+            basePath={`/projects/${projectId}/knowledge`}
+            noun="documents"
+            busy={isPlaceholderData}
+          />
+        </>
       )}
     </div>
   );

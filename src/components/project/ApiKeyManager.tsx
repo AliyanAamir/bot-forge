@@ -1,18 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useApiKeyAction, type ApiKeyState } from "@/lib/api/hooks";
 import { Eye, EyeOff, Copy, Check, RefreshCw, Ban, RotateCcw, ShieldAlert, Loader2 } from "lucide-react";
-
-interface KeyState {
-  apiKey: string;
-  apiKeyRotatedAt: string | null;
-  apiKeyRevokedAt: string | null;
-}
 
 interface Props {
   projectId: string;
   canManage: boolean;
-  initial: KeyState;
+  initial: ApiKeyState;
 }
 
 function mask(key: string) {
@@ -23,31 +18,22 @@ function mask(key: string) {
 export function ApiKeyManager({ projectId, canManage, initial }: Props) {
   const [state, setState] = useState(initial);
   const [revealed, setRevealed] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [confirmRotate, setConfirmRotate] = useState(false);
 
+  const keyAction = useApiKeyAction(projectId);
   const revoked = !!state.apiKeyRevokedAt;
 
-  async function action(name: "rotate" | "revoke" | "reactivate") {
-    setBusy(name);
-    const res = await fetch(`/api/projects/${projectId}/api-key`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: name }),
+  function run(action: "rotate" | "revoke" | "reactivate") {
+    keyAction.mutate(action, {
+      onSuccess: (data) => {
+        setState(data);
+        if (action === "rotate") setRevealed(true);
+        setConfirmRotate(false);
+      },
     });
-    if (res.ok) {
-      const data = await res.json();
-      setState({
-        apiKey: data.apiKey,
-        apiKeyRotatedAt: data.apiKeyRotatedAt,
-        apiKeyRevokedAt: data.apiKeyRevokedAt,
-      });
-      if (name === "rotate") setRevealed(true);
-    }
-    setBusy(null);
-    setConfirmRotate(false);
   }
+  const busy = keyAction.isPending ? keyAction.variables : null;
 
   async function copy() {
     await navigator.clipboard.writeText(state.apiKey);
@@ -68,7 +54,6 @@ export function ApiKeyManager({ projectId, canManage, initial }: Props) {
         </div>
       )}
 
-      {/* Key display — warm graphite */}
       <div className="rounded-xl p-6 border border-line" style={{ backgroundColor: "oklch(0.255 0.012 56)" }}>
         <div className="flex items-center justify-between mb-3">
           <span className="text-white/55 text-xs font-medium uppercase tracking-wide">Secret key</span>
@@ -98,30 +83,37 @@ export function ApiKeyManager({ projectId, canManage, initial }: Props) {
               <p className="hint mt-0.5">Rotation invalidates the old key immediately. Update your embed after rotating.</p>
             </div>
           </div>
-          <div className="panel-pad flex flex-wrap gap-3">
-            {!confirmRotate ? (
-              <button type="button" onClick={() => setConfirmRotate(true)} disabled={busy !== null} className="btn btn-primary">
-                <RefreshCw className="size-4" strokeWidth={1.75} /> Rotate key
-              </button>
-            ) : (
-              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-warning/40 px-3 py-2" style={{ backgroundColor: "var(--color-warning-soft)" }}>
-                <span className="text-sm text-ink">Confirm rotate? Existing embeds will break.</span>
-                <button type="button" onClick={() => action("rotate")} disabled={busy !== null} className="btn btn-primary btn-sm">
-                  {busy === "rotate" ? (<><Loader2 className="size-3.5 animate-spin" /> Rotating…</>) : "Yes, rotate"}
-                </button>
-                <button type="button" onClick={() => setConfirmRotate(false)} className="btn btn-ghost btn-sm">Cancel</button>
+          <div className="panel-pad space-y-3">
+            {keyAction.isError && (
+              <div className="badge-danger rounded-lg border px-4 py-3 text-sm font-medium w-full block">
+                {keyAction.error.message}
               </div>
             )}
+            <div className="flex flex-wrap gap-3">
+              {!confirmRotate ? (
+                <button type="button" onClick={() => setConfirmRotate(true)} disabled={busy !== null} className="btn btn-primary">
+                  <RefreshCw className="size-4" strokeWidth={1.75} /> Rotate key
+                </button>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-warning/40 px-3 py-2" style={{ backgroundColor: "var(--color-warning-soft)" }}>
+                  <span className="text-sm text-ink">Confirm rotate? Existing embeds will break.</span>
+                  <button type="button" onClick={() => run("rotate")} disabled={busy !== null} className="btn btn-primary btn-sm">
+                    {busy === "rotate" ? (<><Loader2 className="size-3.5 animate-spin" /> Rotating…</>) : "Yes, rotate"}
+                  </button>
+                  <button type="button" onClick={() => setConfirmRotate(false)} className="btn btn-ghost btn-sm">Cancel</button>
+                </div>
+              )}
 
-            {revoked ? (
-              <button type="button" onClick={() => action("reactivate")} disabled={busy !== null} className="btn btn-secondary">
-                {busy === "reactivate" ? (<><Loader2 className="size-4 animate-spin" /> Reactivating…</>) : (<><RotateCcw className="size-4" strokeWidth={1.75} /> Reactivate</>)}
-              </button>
-            ) : (
-              <button type="button" onClick={() => action("revoke")} disabled={busy !== null} className="btn btn-secondary hover:!text-danger hover:!border-danger/40">
-                {busy === "revoke" ? (<><Loader2 className="size-4 animate-spin" /> Revoking…</>) : (<><Ban className="size-4" strokeWidth={1.75} /> Revoke</>)}
-              </button>
-            )}
+              {revoked ? (
+                <button type="button" onClick={() => run("reactivate")} disabled={busy !== null} className="btn btn-secondary">
+                  {busy === "reactivate" ? (<><Loader2 className="size-4 animate-spin" /> Reactivating…</>) : (<><RotateCcw className="size-4" strokeWidth={1.75} /> Reactivate</>)}
+                </button>
+              ) : (
+                <button type="button" onClick={() => run("revoke")} disabled={busy !== null} className="btn btn-secondary hover:!text-danger hover:!border-danger/40">
+                  {busy === "revoke" ? (<><Loader2 className="size-4 animate-spin" /> Revoking…</>) : (<><Ban className="size-4" strokeWidth={1.75} /> Revoke</>)}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       ) : (

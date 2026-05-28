@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { INVITABLE_ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, type ProjectRole } from "@/lib/permissions";
+import { useInvites, useSendInvite, useRevokeInvite } from "@/lib/api/hooks";
+import { usePageParam, ClientPager } from "@/components/ui/ClientPager";
 import { Send, Copy, Loader2, Crown } from "lucide-react";
 
 interface UserLite {
@@ -18,64 +20,43 @@ interface Member {
   user: UserLite;
 }
 
-interface Invite {
-  id: string;
-  email: string;
-  role: string;
-  token: string;
-  expiresAt: string;
-  createdAt: string;
-  invitedBy: { name: string | null; email: string };
-}
-
 interface Props {
   projectId: string;
   currentUserId: string;
   viewerRole: ProjectRole | null;
   owner: UserLite;
   members: Member[];
-  invites: Invite[];
 }
 
 function initials(u: UserLite) {
   return (u.name || u.email).trim()[0]?.toUpperCase() ?? "?";
 }
 
-export function TeamManager({ projectId, currentUserId, viewerRole, owner, members, invites }: Props) {
+export function TeamManager({ projectId, currentUserId, viewerRole, owner, members }: Props) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<Exclude<ProjectRole, "owner">>("viewer");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
-
+  const page = usePageParam();
   const canManage = viewerRole === "owner" || viewerRole === "admin";
 
-  async function invite(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    setInfo("");
-    const res = await fetch(`/api/projects/${projectId}/invites`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, role }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || "Failed to send invite");
-    } else {
-      setInfo(`Invite sent to ${email}.`);
-      setEmail("");
-      router.refresh();
-    }
-    setBusy(false);
-  }
+  const invitesQuery = useInvites(projectId, page, canManage);
+  const sendInvite = useSendInvite(projectId);
+  const revokeInvite = useRevokeInvite(projectId, page);
 
-  async function deleteInvite(inviteId: string) {
-    if (!confirm("Revoke this invite?")) return;
-    await fetch(`/api/projects/${projectId}/invites/${inviteId}`, { method: "DELETE" });
-    router.refresh();
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<Exclude<ProjectRole, "owner">>("viewer");
+  const [info, setInfo] = useState("");
+
+  function invite(e: React.FormEvent) {
+    e.preventDefault();
+    setInfo("");
+    sendInvite.mutate(
+      { email, role },
+      {
+        onSuccess: () => {
+          setInfo(`Invite sent to ${email}.`);
+          setEmail("");
+        },
+      },
+    );
   }
 
   async function removeMember(userId: string, self: boolean) {
@@ -91,6 +72,8 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
     setInfo("Invite link copied.");
     setTimeout(() => setInfo(""), 1800);
   }
+
+  const invites = invitesQuery.data;
 
   return (
     <div className="space-y-6">
@@ -121,14 +104,14 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
                   <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                 ))}
               </select>
-              <button type="submit" disabled={busy} className="btn btn-primary">
-                {busy ? (<><Loader2 className="size-4 animate-spin" /> Sending…</>) : (<><Send className="size-4" strokeWidth={1.75} /> Send invite</>)}
+              <button type="submit" disabled={sendInvite.isPending} className="btn btn-primary">
+                {sendInvite.isPending ? (<><Loader2 className="size-4 animate-spin" /> Sending…</>) : (<><Send className="size-4" strokeWidth={1.75} /> Send invite</>)}
               </button>
             </form>
             <p className="mt-3 text-xs text-muted">
               <strong className="text-ink">{ROLE_LABELS[role]}:</strong> {ROLE_DESCRIPTIONS[role]}
             </p>
-            {error && <p className="mt-3 text-sm text-danger">{error}</p>}
+            {sendInvite.isError && <p className="mt-3 text-sm text-danger">{sendInvite.error.message}</p>}
             {info && <p className="mt-3 text-sm text-success">{info}</p>}
           </div>
         </section>
@@ -163,32 +146,46 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
         </ul>
       </section>
 
-      {invites.length > 0 && (
+      {canManage && invites && invites.total > 0 && (
         <section className="panel overflow-hidden">
           <div className="panel-head"><h2 className="font-semibold text-ink">Pending invites</h2></div>
-          <ul className="divide-y divide-line">
-            {invites.map((i) => (
-              <li key={i.id} className="px-5 py-3.5 flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-ink font-medium truncate">{i.email}</p>
-                  <p className="text-xs text-faint mt-0.5">
-                    by {i.invitedBy.name || i.invitedBy.email} · expires {new Date(i.expiresAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="badge badge-neutral capitalize">{i.role}</span>
-                  <button type="button" onClick={() => copyLink(i.token)} className="inline-flex items-center gap-1 text-xs text-ember-strong hover:underline font-medium">
-                    <Copy className="size-3" strokeWidth={1.75} /> Link
-                  </button>
-                  {canManage && (
-                    <button type="button" onClick={() => deleteInvite(i.id)} className="text-xs text-danger hover:underline font-medium">
-                      Revoke
+          <ul className={`divide-y divide-line ${invitesQuery.isPlaceholderData ? "opacity-60 transition-opacity" : ""}`}>
+            {invites.data.map((i) => {
+              const revoking = revokeInvite.isPending && revokeInvite.variables === i.id;
+              return (
+                <li key={i.id} className="px-5 py-3.5 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-ink font-medium truncate">{i.email}</p>
+                    <p className="text-xs text-faint mt-0.5">
+                      by {i.invitedBy.name || i.invitedBy.email} · expires {new Date(i.expiresAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="badge badge-neutral capitalize">{i.role}</span>
+                    <button type="button" onClick={() => copyLink(i.token)} className="inline-flex items-center gap-1 text-xs text-ember-strong hover:underline font-medium">
+                      <Copy className="size-3" strokeWidth={1.75} /> Link
                     </button>
-                  )}
-                </div>
-              </li>
-            ))}
+                    <button type="button" onClick={() => revokeInvite.mutate(i.id)} disabled={revoking} className="text-xs text-danger hover:underline font-medium inline-flex items-center gap-1">
+                      {revoking && <Loader2 className="size-3 animate-spin" />} Revoke
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
+          {invites.totalPages > 1 && (
+            <div className="px-5 pb-4">
+              <ClientPager
+                page={page}
+                totalPages={invites.totalPages}
+                total={invites.total}
+                pageSize={invites.pageSize}
+                basePath={`/projects/${projectId}/team`}
+                noun="invites"
+                busy={invitesQuery.isPlaceholderData}
+              />
+            </div>
+          )}
         </section>
       )}
     </div>
