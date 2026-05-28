@@ -13,6 +13,10 @@ export async function GET(req: NextRequest) {
   if (!project) return NextResponse.json({ error: "Invalid apiKey" }, { status: 401 });
   if (project.apiKeyRevokedAt) return NextResponse.json({ error: "API key revoked" }, { status: 403 });
 
+  // TODO(domain-allowlist): same Origin-header check as /api/chat.
+  // Config is fetched on widget init — blocking it here prevents the widget
+  // from loading at all on unlisted domains (fail-fast, no partial render).
+
   const c = project.config;
   const iconKey = c?.iconKey && isBotIconKey(c.iconKey) ? c.iconKey : "bot";
 

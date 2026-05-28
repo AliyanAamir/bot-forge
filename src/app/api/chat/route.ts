@@ -24,6 +24,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "API key revoked" }, { status: 403 });
     }
 
+    // TODO(domain-allowlist): enforce per-project domain restriction.
+    // When project.config.allowedDomains is set, check the Origin header
+    // (fall back to Referer if absent) against the comma-separated list.
+    // Return 403 { error: "Domain not allowed" } if the origin doesn't match.
+    // Origin header is always present on cross-origin fetch (which the widget uses).
+    // Example enforcement:
+    //   const origin = req.headers.get("origin") ?? req.headers.get("referer") ?? "";
+    //   const allowed = (project.config?.allowedDomains ?? "").split(",").map(s => s.trim()).filter(Boolean);
+    //   if (allowed.length && !allowed.some(d => origin.startsWith(d))) {
+    //     return NextResponse.json({ error: "Domain not allowed" }, { status: 403 });
+    //   }
+
     const config = project.config;
 
     let session = sessionId

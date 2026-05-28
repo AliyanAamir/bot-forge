@@ -132,6 +132,12 @@ model ProjectConfig {
   leadCaptureEnabled       Boolean @default(false)
   leadCaptureAfterMessages Int     @default(3)
   leadCapturePrompt        String  @default("After helping the visitor, politely ask for their name, email, and phone number so a team member can follow up.")
+  // TODO(domain-allowlist): allowedDomains String? @default(null)
+  // Comma-separated allowed origins, e.g. "https://example.com,https://www.example.com".
+  // Null = unrestricted (dev default). Before enabling enforcement:
+  //   1. Add this field + run `prisma migrate dev`
+  //   2. Enforce in POST /api/chat and GET /api/widget/config via Origin header
+  //   3. Expose in ConfigForm under an "Embed & Security" section
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
