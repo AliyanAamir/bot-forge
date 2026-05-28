@@ -1,26 +1,222 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ============================================================
+   BotForge — "Forge" design system
+   Warm-light workbench. Tinted paper, ink text, ember accent.
+   All color in OKLCH; neutrals tinted toward the brand hue.
+   ============================================================ */
+
+@theme {
+  /* Surfaces (warm paper, never pure white) */
+  --color-paper: oklch(0.972 0.008 74);
+  --color-surface: oklch(0.992 0.005 78);
+  --color-raised: oklch(0.998 0.003 80);
+  --color-sunk: oklch(0.955 0.009 72);
+
+  /* Ink (warm near-black, never pure black) */
+  --color-ink: oklch(0.245 0.014 56);
+  --color-muted: oklch(0.495 0.012 58);
+  --color-faint: oklch(0.625 0.010 62);
+
+  /* Lines */
+  --color-line: oklch(0.905 0.009 72);
+  --color-line-strong: oklch(0.835 0.012 66);
+
+  /* Ember — the accent. Forge fire. */
+  --color-ember: oklch(0.660 0.170 48);
+  --color-ember-strong: oklch(0.560 0.155 44);
+  --color-ember-hover: oklch(0.600 0.175 46);
+  --color-ember-soft: oklch(0.955 0.038 62);
+  --color-ember-line: oklch(0.880 0.060 58);
+
+  /* Semantic */
+  --color-success: oklch(0.560 0.105 158);
+  --color-success-soft: oklch(0.955 0.040 158);
+  --color-danger: oklch(0.560 0.190 26);
+  --color-danger-soft: oklch(0.958 0.035 28);
+  --color-warning: oklch(0.720 0.140 72);
+  --color-warning-soft: oklch(0.962 0.045 78);
+
+  /* Type */
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Radii — moderate, not pill-everything */
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* Warm workbench backdrop: faint ember bloom top-right + paper grain.
+   Very low chroma so it reads as ambient light, not decoration. */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-paper);
+  background-image:
+    radial-gradient(120% 80% at 100% -10%, oklch(0.78 0.09 60 / 0.16), transparent 55%),
+    radial-gradient(90% 60% at -10% 0%, oklch(0.85 0.04 220 / 0.05), transparent 50%);
+  background-attachment: fixed;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-input, textarea, select {
-  color: #0f172a;
+/* Selection in ember */
+::selection {
+  background: oklch(0.66 0.17 48 / 0.22);
+  color: var(--color-ink);
 }
-input::placeholder, textarea::placeholder {
-  color: #94a3b8;
+
+/* Tighter, warmer scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+@layer base {
+  h1, h2, h3, h4 {
+    letter-spacing: -0.011em;
+    color: var(--color-ink);
+  }
+}
+
+/* ============================================================
+   Component vocabulary — define each affordance once.
+   ============================================================ */
+@layer components {
+  /* ---- Buttons ---- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium
+           px-4 py-2.5 transition-[background-color,border-color,color,box-shadow] duration-150
+           disabled:opacity-55 disabled:pointer-events-none select-none whitespace-nowrap
+           outline-none focus-visible:ring-2 focus-visible:ring-ember/35;
+  }
+  .btn-sm { @apply px-3 py-1.5 text-[0.8125rem] rounded-md gap-1.5; }
+  .btn-icon { @apply p-2 rounded-md; }
+
+  .btn-primary {
+    @apply text-white;
+    background-color: var(--color-ember);
+    box-shadow: 0 1px 0 0 oklch(0.45 0.16 44 / 0.35) inset, 0 1px 2px oklch(0.4 0.1 44 / 0.18);
+  }
+  .btn-primary:hover { background-color: var(--color-ember-hover); }
+  .btn-primary:active { background-color: var(--color-ember-strong); }
+
+  .btn-secondary {
+    @apply text-ink bg-surface border border-line-strong;
+  }
+  .btn-secondary:hover { @apply bg-sunk border-line-strong; }
+
+  .btn-ghost { @apply text-muted hover:text-ink hover:bg-sunk; }
+
+  .btn-danger {
+    @apply text-white;
+    background-color: var(--color-danger);
+  }
+  .btn-danger:hover { filter: brightness(1.06); }
+
+  /* ---- Form controls ---- */
+  .input, .textarea, .select {
+    @apply w-full rounded-lg border border-line-strong bg-surface text-ink
+           px-3.5 py-2.5 text-sm transition-[border-color,box-shadow] duration-150
+           placeholder:text-faint outline-none
+           focus:border-ember focus:ring-4 focus:ring-ember/12
+           disabled:bg-sunk disabled:text-faint disabled:cursor-not-allowed;
+  }
+  .textarea { @apply resize-none leading-relaxed; }
+  .select { @apply pr-9 appearance-none bg-no-repeat cursor-pointer; }
+
+  .label { @apply block text-sm font-medium text-ink mb-1.5; }
+  .hint { @apply text-xs text-muted leading-relaxed; }
+
+  /* ---- Surfaces ---- */
+  .panel {
+    @apply rounded-xl border border-line bg-surface;
+  }
+  .panel-pad { @apply p-6; }
+  .panel-head {
+    @apply flex items-center justify-between gap-4 px-6 py-4 border-b border-line;
+  }
+
+  /* ---- Badges ---- */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-md px-2 py-0.5
+           text-xs font-medium border;
+  }
+  .badge-neutral { @apply bg-sunk text-muted border-line; }
+  .badge-ember { background-color: var(--color-ember-soft); color: var(--color-ember-strong); border-color: var(--color-ember-line); }
+  .badge-success { background-color: var(--color-success-soft); color: var(--color-success); border-color: oklch(0.88 0.06 158); }
+  .badge-danger { background-color: var(--color-danger-soft); color: var(--color-danger); border-color: oklch(0.89 0.05 28); }
+
+  /* ---- Misc ---- */
+  .kbd {
+    @apply font-mono text-[0.75rem] px-1.5 py-0.5 rounded border border-line-strong bg-sunk text-muted;
+  }
+  .divide-line > * + * { border-color: var(--color-line); }
+}
+
+/* Custom select caret in ember-muted ink */
+.select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23807268' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+}
+
+/* Range inputs in ember */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: var(--color-sunk);
+  border: 1px solid var(--color-line);
+  cursor: pointer;
+}
+input[type="range"]:disabled { opacity: 0.5; cursor: not-allowed; }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 9999px;
+  background: var(--color-ember);
+  border: 2px solid var(--color-raised);
+  box-shadow: 0 1px 3px oklch(0.4 0.1 44 / 0.35);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 9999px;
+  background: var(--color-ember);
+  border: 2px solid var(--color-raised);
+}
+
+/* Color inputs sit in a tidy swatch */
+input[type="color"] {
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  background: transparent;
+}
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 3px; }
+input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0.3rem; }
+
+/* Checkbox accent */
+input[type="checkbox"] { accent-color: var(--color-ember); }
+
+/* Motion: state + reveal only, ease-out */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }

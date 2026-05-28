@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Copy, Check, FileCode2, ShieldAlert } from "lucide-react";
 
 interface Config {
   primaryColor: string;
@@ -43,72 +44,77 @@ export function WidgetEmbed({ project }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Snippet */}
-      <div className="bg-slate-900 rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-700">
-          <span className="text-slate-400 text-sm font-medium">HTML embed snippet</span>
+      {/* Snippet — warm graphite, belongs to the palette */}
+      <div className="rounded-xl overflow-hidden border border-line" style={{ backgroundColor: "oklch(0.255 0.012 56)" }}>
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
+          <span className="text-white/55 text-xs font-medium uppercase tracking-wide">HTML embed snippet</span>
           <button
             onClick={handleCopy}
-            className="text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 hover:text-white transition-colors"
           >
-            {copied ? "✓ Copied!" : "Copy"}
+            {copied ? (<><Check className="size-3.5" strokeWidth={2.25} /> Copied</>) : (<><Copy className="size-3.5" strokeWidth={1.75} /> Copy</>)}
           </button>
         </div>
-        <pre className="p-5 text-sm text-green-400 font-mono overflow-x-auto leading-relaxed whitespace-pre">
+        <pre className="p-5 text-sm font-mono overflow-x-auto leading-relaxed whitespace-pre" style={{ color: "oklch(0.86 0.10 70)" }}>
           {snippet}
         </pre>
       </div>
 
-      {/* Widget details */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        <div className="bg-white border border-slate-200 rounded-2xl p-6">
-          <h2 className="font-semibold text-slate-800 mb-4">Widget files</h2>
-          <ul className="space-y-3">
+      {/* Details */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="panel overflow-hidden">
+          <div className="panel-head"><h2 className="font-semibold text-ink">Widget files</h2></div>
+          <ul className="divide-y divide-line">
             {[
-              { file: "botforge.js", desc: "Widget runtime — handles chat UI and API calls" },
-              { file: "botforge.css", desc: "Widget styles — scoped, won't affect your site" },
+              { file: "botforge.js", tag: "JS", desc: "Widget runtime — chat UI and API calls" },
+              { file: "botforge.css", tag: "CSS", desc: "Scoped styles — won't affect your site" },
             ].map((f) => (
-              <li key={f.file} className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                  <span className="text-xs font-mono text-slate-600">{f.file.endsWith(".js") ? "JS" : "CSS"}</span>
-                </div>
+              <li key={f.file} className="flex items-start gap-3 px-5 py-4">
+                <span className="inline-flex size-9 items-center justify-center rounded-lg bg-sunk text-muted shrink-0">
+                  <FileCode2 className="size-4" strokeWidth={1.75} />
+                </span>
                 <div>
-                  <p className="text-sm font-medium text-slate-800 font-mono">{f.file}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{f.desc}</p>
+                  <p className="text-sm font-medium text-ink font-mono">{f.file}</p>
+                  <p className="text-xs text-muted mt-0.5">{f.desc}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-6">
-          <h2 className="font-semibold text-slate-800 mb-4">Widget config</h2>
-          <dl className="space-y-2 text-sm">
+        <div className="panel overflow-hidden">
+          <div className="panel-head"><h2 className="font-semibold text-ink">Widget config</h2></div>
+          <dl className="px-5 py-4 space-y-3 text-sm">
             {[
               { k: "Bot name", v: project.config?.botName || "Assistant" },
               { k: "Position", v: project.config?.position || "bottom-right" },
-              { k: "Primary color", v: project.config?.primaryColor || "#6366f1" },
               { k: "Welcome", v: project.config?.welcomeMessage || "Hi! How can I help?" },
             ].map(({ k, v }) => (
-              <div key={k} className="flex gap-2">
-                <dt className="text-slate-500 w-28 shrink-0">{k}</dt>
-                <dd className="text-slate-800 font-medium truncate">{v}</dd>
+              <div key={k} className="flex gap-3">
+                <dt className="text-faint w-24 shrink-0">{k}</dt>
+                <dd className="text-ink font-medium truncate">{v}</dd>
               </div>
             ))}
+            <div className="flex gap-3 items-center">
+              <dt className="text-faint w-24 shrink-0">Primary</dt>
+              <dd className="flex items-center gap-2">
+                <span className="size-4 rounded border border-line" style={{ backgroundColor: project.config?.primaryColor || "var(--color-ember)" }} />
+                <span className="text-ink font-mono text-xs">{project.config?.primaryColor || "#6366f1"}</span>
+              </dd>
+            </div>
           </dl>
         </div>
       </div>
 
-      {/* API key */}
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+      {/* API key warning */}
+      <div className="rounded-xl border border-warning/30 p-5" style={{ backgroundColor: "var(--color-warning-soft)" }}>
         <div className="flex items-start gap-3">
-          <span className="text-xl">⚠️</span>
+          <ShieldAlert className="size-5 text-warning shrink-0 mt-0.5" strokeWidth={1.75} />
           <div>
-            <h3 className="font-semibold text-amber-800 mb-1">Keep your API key safe</h3>
-            <p className="text-amber-700 text-sm leading-relaxed">
-              Your API key <code className="font-mono bg-amber-100 px-1.5 py-0.5 rounded text-xs">{project.apiKey.slice(0, 12)}...</code> is
-              embedded in the widget. Only use it on trusted websites. You can rotate it from the project
-              settings if it&apos;s ever compromised.
+            <h3 className="font-semibold text-ink mb-1">Keep your API key safe</h3>
+            <p className="text-muted text-sm leading-relaxed">
+              Your API key <code className="kbd">{project.apiKey.slice(0, 12)}…</code> is embedded in the widget.
+              Only use it on trusted sites. Rotate it from the API Key page if it&apos;s ever compromised.
             </p>
           </div>
         </div>

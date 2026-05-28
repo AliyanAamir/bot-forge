@@ -1,31 +1,44 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { LeadsTable } from "@/components/project/LeadsTable";
+import { PageHeader } from "@/components/project/PageHeader";
+import { Pager } from "@/components/ui/Pager";
+import { paginationFromRecord } from "@/lib/pagination";
 
-export default async function LeadsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LeadsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await auth();
   const { id } = await params;
+  const sp = await searchParams;
+  const p = paginationFromRecord(sp);
 
   const project = await db.project.findFirst({ where: { id, OR: [{ userId: session!.user.id }, { members: { some: { userId: session!.user.id } } }] } });
   if (!project) notFound();
 
-  const leads = await db.lead.findMany({
-    where: { projectId: id },
-    orderBy: { createdAt: "desc" },
-  });
+  const where = { projectId: id };
+  const [leads, total] = await db.$transaction([
+    db.lead.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: p.skip,
+      take: p.take,
+    }),
+    db.lead.count({ where }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / p.pageSize));
 
   return (
     <div>
-      <div className="mb-6">
-        <Link href={`/projects/${id}`} className="text-sm text-slate-500 hover:text-slate-700">
-          ← {project.name}
-        </Link>
-        <h1 className="text-2xl font-bold text-slate-900 mt-2">Leads</h1>
-        <p className="text-slate-500 text-sm mt-1">Visitors who shared their contact info with the bot</p>
-      </div>
-
+      <PageHeader
+        title="Leads"
+        subtitle="Visitors who shared their contact info with the bot."
+      />
       <LeadsTable projectId={id} initialLeads={leads.map((l) => ({
         id: l.id,
         name: l.name,
@@ -36,6 +49,15 @@ export default async function LeadsPage({ params }: { params: Promise<{ id: stri
         sessionId: l.sessionId,
         createdAt: l.createdAt.toISOString(),
       }))} />
+      <Pager
+        page={p.page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={p.pageSize}
+        basePath={`/projects/${id}/leads`}
+        searchParams={sp}
+        noun="leads"
+      />
     </div>
   );
 }

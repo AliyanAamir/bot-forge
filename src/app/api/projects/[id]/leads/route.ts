@@ -3,8 +3,9 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectRole } from "@/lib/project-access";
 import { can } from "@/lib/permissions";
+import { paginationFromSearchParams, paginate } from "@/lib/pagination";
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -12,12 +13,19 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const project = await db.project.findFirst({ where: { id, OR: [{ userId: session.user.id }, { members: { some: { userId: session.user.id } } }] } });
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const leads = await db.lead.findMany({
-    where: { projectId: id },
-    orderBy: { createdAt: "desc" },
-    include: { session: { select: { id: true, visitorId: true } } },
-  });
-  return NextResponse.json(leads);
+  const p = paginationFromSearchParams(req.nextUrl.searchParams);
+  const where = { projectId: id };
+  const [leads, total] = await db.$transaction([
+    db.lead.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: { session: { select: { id: true, visitorId: true } } },
+      skip: p.skip,
+      take: p.take,
+    }),
+    db.lead.count({ where }),
+  ]);
+  return NextResponse.json(paginate(leads, total, p));
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

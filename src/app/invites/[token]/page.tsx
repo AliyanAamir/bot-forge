@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AcceptInviteForm } from "@/components/auth/AcceptInviteForm";
 import { ROLE_LABELS, type ProjectRole, isProjectRole } from "@/lib/permissions";
+import { LogoMark } from "@/components/brand/Logo";
 
 export default async function AcceptInvitePage({
   params,
@@ -58,20 +59,19 @@ export default async function AcceptInvitePage({
   const existingUser = await db.user.findUnique({ where: { email: invite.email } });
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="inline-flex w-12 h-12 rounded-xl bg-indigo-600 items-center justify-center mb-4">
-            <span className="text-white text-xl font-bold">B</span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">You&apos;re invited</h1>
-          <p className="text-slate-500 mt-2 text-sm leading-relaxed">
-            <strong>{invite.invitedBy.name || invite.invitedBy.email}</strong> invited{" "}
-            <strong>{invite.email}</strong> to join <strong>{invite.project.name}</strong> as a{" "}
-            <strong>{ROLE_LABELS[inviteRole]}</strong>.
+        <div className="flex flex-col items-center text-center mb-8">
+          <LogoMark className="size-12 rounded-xl mb-4" />
+          <h1 className="text-2xl font-semibold tracking-tight text-ink">You&apos;re invited</h1>
+          <p className="text-muted mt-2 text-sm leading-relaxed">
+            <strong className="text-ink">{invite.invitedBy.name || invite.invitedBy.email}</strong> invited{" "}
+            <strong className="text-ink">{invite.email}</strong> to join{" "}
+            <strong className="text-ink">{invite.project.name}</strong> as a{" "}
+            <strong className="text-ink">{ROLE_LABELS[inviteRole]}</strong>.
           </p>
         </div>
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+        <div className="panel panel-pad shadow-[0_1px_3px_oklch(0.4_0.03_60/0.06)]">
           <AcceptInviteForm token={token} email={invite.email} isNewUser={!existingUser} />
         </div>
       </div>
@@ -81,14 +81,11 @@ export default async function AcceptInvitePage({
 
 function InviteShell({ title, body }: { title: string; body: string }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <div className="max-w-sm w-full bg-white border border-slate-200 rounded-2xl p-8 text-center">
-        <h1 className="text-xl font-bold text-slate-900">{title}</h1>
-        <p className="text-slate-500 text-sm mt-2">{body}</p>
-        <Link
-          href="/login"
-          className="inline-block mt-6 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700"
-        >
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="max-w-sm w-full panel panel-pad text-center">
+        <h1 className="text-xl font-semibold tracking-tight text-ink">{title}</h1>
+        <p className="text-muted text-sm mt-2">{body}</p>
+        <Link href="/login" className="btn btn-primary mt-6">
           Go to sign in
         </Link>
       </div>

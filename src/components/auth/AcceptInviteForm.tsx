@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 interface Props {
   token: string;
@@ -47,7 +48,6 @@ export function AcceptInviteForm({ token, email, isNewUser }: Props) {
       }
       router.push(`/projects/${data.projectId}`);
     } else {
-      // Existing user not signed in — send them to login, callback back to invite page
       router.push(`/login?callbackUrl=${encodeURIComponent(`/invites/${token}`)}`);
     }
   }
@@ -55,60 +55,47 @@ export function AcceptInviteForm({ token, email, isNewUser }: Props) {
   return (
     <form onSubmit={submit} className="space-y-4">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">{error}</div>
+        <div className="badge-danger rounded-lg border px-4 py-3 text-sm font-medium w-full block">{error}</div>
       )}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
-        <input
-          type="email"
-          value={email}
-          disabled
-          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50 text-slate-500"
-        />
+        <label className="label">Email</label>
+        <input type="email" value={email} disabled className="input" />
       </div>
       {isNewUser ? (
         <>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Your name</label>
+            <label htmlFor="inv-name" className="label">Your name</label>
             <input
+              id="inv-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Jane Doe"
-              className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Choose a password</label>
+            <label htmlFor="inv-pass" className="label">Choose a password</label>
             <input
+              id="inv-pass"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={8}
               placeholder="Min. 8 characters"
-              className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input"
             />
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-60"
-          >
-            {loading ? "Creating account..." : "Accept & create account"}
+          <button type="submit" disabled={loading} className="btn btn-primary w-full mt-1">
+            {loading ? (<><Loader2 className="size-4 animate-spin" /> Creating account...</>) : "Accept & create account"}
           </button>
         </>
       ) : (
         <>
-          <p className="text-sm text-slate-600">
-            You already have an account. Sign in to accept this invite.
-          </p>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-60"
-          >
-            {loading ? "Redirecting..." : "Continue to sign in"}
+          <p className="text-sm text-muted">You already have an account. Sign in to accept this invite.</p>
+          <button type="submit" disabled={loading} className="btn btn-primary w-full">
+            {loading ? (<><Loader2 className="size-4 animate-spin" /> Redirecting...</>) : "Continue to sign in"}
           </button>
         </>
       )}

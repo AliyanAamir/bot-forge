@@ -6,10 +6,11 @@ import { getProjectRole } from "@/lib/project-access";
 import { can, INVITABLE_ROLES } from "@/lib/permissions";
 import { sendInviteEmail } from "@/lib/mailer";
 import { rateLimit } from "@/lib/rate-limit";
+import { paginationFromSearchParams, paginate } from "@/lib/pagination";
 
 const INVITE_TTL_DAYS = 7;
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -17,20 +18,27 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const role = await getProjectRole(id, session.user.id);
   if (!can(role, "manageTeam")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const invites = await db.invite.findMany({
-    where: { projectId: id, acceptedAt: null },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      token: true,
-      expiresAt: true,
-      createdAt: true,
-      invitedBy: { select: { name: true, email: true } },
-    },
-  });
-  return NextResponse.json(invites);
+  const p = paginationFromSearchParams(req.nextUrl.searchParams);
+  const where = { projectId: id, acceptedAt: null };
+  const [invites, total] = await db.$transaction([
+    db.invite.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: p.skip,
+      take: p.take,
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        token: true,
+        expiresAt: true,
+        createdAt: true,
+        invitedBy: { select: { name: true, email: true } },
+      },
+    }),
+    db.invite.count({ where }),
+  ]);
+  return NextResponse.json(paginate(invites, total, p));
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

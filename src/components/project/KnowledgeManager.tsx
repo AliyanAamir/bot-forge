@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/utils";
+import { Plus, Trash2, FileText, Loader2, Inbox, ExternalLink } from "lucide-react";
 
 interface Doc {
   id: string;
@@ -17,6 +18,8 @@ interface Props {
   projectId: string;
   initialDocs: Doc[];
 }
+
+const TYPES = ["text", "faq", "policy", "guide"];
 
 export function KnowledgeManager({ projectId, initialDocs }: Props) {
   const router = useRouter();
@@ -55,13 +58,11 @@ export function KnowledgeManager({ projectId, initialDocs }: Props) {
 
   async function handleDelete(docId: string) {
     setDeletingId(docId);
-
     await fetch(`/api/knowledge/${projectId}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ docId }),
     });
-
     setDocs((prev) => prev.filter((d) => d.id !== docId));
     setDeletingId(null);
     router.refresh();
@@ -69,114 +70,96 @@ export function KnowledgeManager({ projectId, initialDocs }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Add form */}
+      {/* Add form / trigger */}
       {showForm ? (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6">
-          <h2 className="font-semibold text-slate-800 mb-5">Add knowledge entry</h2>
-          <form onSubmit={handleAdd} className="space-y-4">
+        <section className="panel overflow-hidden">
+          <div className="panel-head">
+            <h2 className="font-semibold text-ink">Add knowledge entry</h2>
+          </div>
+          <form onSubmit={handleAdd} className="panel-pad space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Title *</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Product FAQ"
-                />
+                <label htmlFor="kb-title" className="label">Title <span className="text-ember">*</span></label>
+                <input id="kb-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} required className="input" placeholder="Product FAQ" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Type</label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {["text", "faq", "policy", "guide"].map((t) => (
+                <label htmlFor="kb-type" className="label">Type</label>
+                <select id="kb-type" value={type} onChange={(e) => setType(e.target.value)} className="select">
+                  {TYPES.map((t) => (
                     <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
                   ))}
                 </select>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Source URL</label>
-              <input
-                type="url"
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="https://example.com/page (optional)"
-              />
+              <label htmlFor="kb-source" className="label">Source URL</label>
+              <input id="kb-source" type="url" value={source} onChange={(e) => setSource(e.target.value)} className="input" placeholder="https://example.com/page (optional)" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Content *</label>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                required
-                rows={8}
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono"
-                placeholder="Paste your content here — docs, FAQs, policies..."
-              />
+              <label htmlFor="kb-content" className="label">Content <span className="text-ember">*</span></label>
+              <textarea id="kb-content" value={content} onChange={(e) => setContent(e.target.value)} required rows={8} className="textarea font-mono text-[0.8125rem]" placeholder="Paste your content here — docs, FAQs, policies..." />
             </div>
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="border border-slate-300 text-slate-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60"
-              >
-                {saving ? "Saving..." : "Add to knowledge base"}
+              <button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">Cancel</button>
+              <button type="submit" disabled={saving} className="btn btn-primary">
+                {saving ? (<><Loader2 className="size-4 animate-spin" /> Saving...</>) : "Add to knowledge base"}
               </button>
             </div>
           </form>
-        </div>
+        </section>
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="w-full bg-white border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:border-indigo-400 hover:bg-indigo-50 transition-all group"
+          className="group w-full rounded-xl border border-dashed border-line-strong bg-surface/50 px-6 py-7 text-center transition-colors hover:border-ember hover:bg-ember-soft/40 outline-none focus-visible:border-ember"
         >
-          <div className="text-3xl mb-2">+</div>
-          <p className="text-slate-600 font-medium group-hover:text-indigo-600">Add knowledge entry</p>
-          <p className="text-slate-400 text-sm mt-1">Text, FAQs, policies, guides</p>
+          <span className="inline-flex size-10 items-center justify-center rounded-lg bg-sunk text-muted mb-2 transition-colors group-hover:bg-ember-soft group-hover:text-ember-strong">
+            <Plus className="size-5" strokeWidth={2} />
+          </span>
+          <p className="text-ink font-medium">Add knowledge entry</p>
+          <p className="text-faint text-sm mt-0.5">Text, FAQs, policies, guides</p>
         </button>
       )}
 
       {/* Doc list */}
       {docs.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
-          <div className="text-4xl mb-3">📭</div>
-          <p className="text-sm">No documents yet. Add your first knowledge entry above.</p>
+        <div className="panel flex flex-col items-center text-center px-6 py-14">
+          <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-sunk text-faint mb-3">
+            <Inbox className="size-6" strokeWidth={1.5} />
+          </span>
+          <p className="text-ink font-medium text-sm">No documents yet</p>
+          <p className="text-muted text-sm mt-1">Add your first knowledge entry above.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="panel divide-y divide-line overflow-hidden">
           {docs.map((doc) => (
-            <div key={doc.id} className="bg-white border border-slate-200 rounded-xl p-5 flex items-start gap-4">
-              <div className="shrink-0 w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 font-medium text-xs">
-                {doc.type.slice(0, 2).toUpperCase()}
-              </div>
+            <div key={doc.id} className="flex items-start gap-4 px-5 py-4">
+              <span className="shrink-0 inline-flex size-9 items-center justify-center rounded-lg bg-ember-soft text-ember-strong">
+                <FileText className="size-4" strokeWidth={1.75} />
+              </span>
               <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-slate-800 truncate">{doc.title}</h3>
-                <p className="text-slate-500 text-sm mt-0.5 line-clamp-2">{doc.content}</p>
-                <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-medium text-ink truncate">{doc.title}</h3>
+                  <span className="badge badge-neutral capitalize shrink-0">{doc.type}</span>
+                </div>
+                <p className="text-muted text-sm mt-1 line-clamp-2">{doc.content}</p>
+                <div className="flex items-center gap-3 mt-2 text-xs text-faint">
                   <span>{formatDate(doc.createdAt)}</span>
                   <span>{doc.content.length} chars</span>
-                  {doc.source && <span className="truncate max-w-[200px]">{doc.source}</span>}
+                  {doc.source && (
+                    <a href={doc.source} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-ember-strong hover:underline max-w-[220px] truncate">
+                      <ExternalLink className="size-3 shrink-0" strokeWidth={1.75} />
+                      <span className="truncate">{doc.source}</span>
+                    </a>
+                  )}
                 </div>
               </div>
               <button
                 onClick={() => handleDelete(doc.id)}
                 disabled={deletingId === doc.id}
-                className="shrink-0 text-slate-400 hover:text-red-500 transition-colors text-sm disabled:opacity-50"
+                className="btn btn-ghost btn-icon shrink-0 hover:text-danger"
+                aria-label="Delete entry"
               >
-                {deletingId === doc.id ? "..." : "✕"}
+                {deletingId === doc.id ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" strokeWidth={1.75} />}
               </button>
             </div>
           ))}

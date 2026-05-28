@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconPicker } from "./IconPicker";
 import type { BotIconKey } from "@/lib/bot-icons";
+import { Palette, SlidersHorizontal, UserPlus, Check, Loader2 } from "lucide-react";
 
 interface ProjectConfig {
   primaryColor: string;
@@ -82,26 +83,33 @@ export function ConfigForm({ projectId, config, models }: Props) {
   }
 
   return (
-    <form onSubmit={handleSave} className="space-y-8">
+    <form onSubmit={handleSave} className="space-y-6 pb-4">
       {/* Appearance */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-6">
-        <h2 className="font-semibold text-slate-800 mb-5">Appearance</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <section className="panel overflow-hidden">
+        <div className="panel-head">
+          <h2 className="flex items-center gap-2.5 font-semibold text-ink">
+            <Palette className="size-4 text-ember" strokeWidth={1.75} />
+            Appearance
+          </h2>
+        </div>
+        <div className="panel-pad grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Bot Name</label>
+            <label htmlFor="cfg-botname" className="label">Bot name</label>
             <input
+              id="cfg-botname"
               type="text"
               value={form.botName}
               onChange={(e) => set("botName", e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Widget Position</label>
+            <label htmlFor="cfg-pos" className="label">Widget position</label>
             <select
+              id="cfg-pos"
               value={form.position}
               onChange={(e) => set("position", e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="select"
             >
               {POSITIONS.map((p) => (
                 <option key={p} value={p}>{p}</option>
@@ -109,42 +117,42 @@ export function ConfigForm({ projectId, config, models }: Props) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Primary Color</label>
-            <div className="flex items-center gap-3">
+            <label className="label">Primary color</label>
+            <div className="flex items-center gap-2.5">
               <input
                 type="color"
                 value={form.primaryColor}
                 onChange={(e) => set("primaryColor", e.target.value)}
-                className="h-10 w-16 border border-slate-300 rounded-lg cursor-pointer p-0.5"
+                className="h-10 w-14 shrink-0"
               />
               <input
                 type="text"
                 value={form.primaryColor}
                 onChange={(e) => set("primaryColor", e.target.value)}
-                className="flex-1 px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                className="input font-mono"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Text Color</label>
-            <div className="flex items-center gap-3">
+            <label className="label">Text color</label>
+            <div className="flex items-center gap-2.5">
               <input
                 type="color"
                 value={form.textColor}
                 onChange={(e) => set("textColor", e.target.value)}
-                className="h-10 w-16 border border-slate-300 rounded-lg cursor-pointer p-0.5"
+                className="h-10 w-14 shrink-0"
               />
               <input
                 type="text"
                 value={form.textColor}
                 onChange={(e) => set("textColor", e.target.value)}
-                className="flex-1 px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                className="input font-mono"
               />
             </div>
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-2">Bot Icon</label>
-            <p className="text-xs text-slate-500 mb-3">Shown on the floating chat button. Tinted with your primary color.</p>
+            <label className="label mb-1">Bot icon</label>
+            <p className="hint mb-3">Shown on the floating chat button. Tinted with your primary color.</p>
             <IconPicker
               value={form.iconKey}
               color={form.primaryColor}
@@ -152,36 +160,44 @@ export function ConfigForm({ projectId, config, models }: Props) {
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Welcome Message</label>
+            <label htmlFor="cfg-welcome" className="label">Welcome message</label>
             <input
+              id="cfg-welcome"
               type="text"
               value={form.welcomeMessage}
               onChange={(e) => set("welcomeMessage", e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input"
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Input Placeholder</label>
+            <label htmlFor="cfg-placeholder" className="label">Input placeholder</label>
             <input
+              id="cfg-placeholder"
               type="text"
               value={form.placeholder}
               onChange={(e) => set("placeholder", e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="input"
             />
           </div>
         </div>
       </section>
 
       {/* Behavior */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-6">
-        <h2 className="font-semibold text-slate-800 mb-5">Behavior & Model</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <section className="panel overflow-hidden">
+        <div className="panel-head">
+          <h2 className="flex items-center gap-2.5 font-semibold text-ink">
+            <SlidersHorizontal className="size-4 text-ember" strokeWidth={1.75} />
+            Behavior &amp; model
+          </h2>
+        </div>
+        <div className="panel-pad grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Groq Model</label>
+            <label htmlFor="cfg-model" className="label">Groq model</label>
             <select
+              id="cfg-model"
               value={form.groqModel}
               onChange={(e) => set("groqModel", e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="select"
             >
               {models.map((m) => (
                 <option key={m.id} value={m.id}>{m.label}</option>
@@ -189,8 +205,9 @@ export function ConfigForm({ projectId, config, models }: Props) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Temperature: <span className="font-mono text-indigo-600">{form.temperature}</span>
+            <label className="label flex items-center justify-between">
+              <span>Temperature</span>
+              <span className="kbd">{form.temperature}</span>
             </label>
             <input
               type="range"
@@ -199,16 +216,17 @@ export function ConfigForm({ projectId, config, models }: Props) {
               step="0.1"
               value={form.temperature}
               onChange={(e) => set("temperature", parseFloat(e.target.value))}
-              className="w-full"
+              className="w-full mt-1.5"
             />
-            <div className="flex justify-between text-xs text-slate-400 mt-1">
+            <div className="flex justify-between text-xs text-faint mt-1.5">
               <span>Precise</span>
               <span>Creative</span>
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Max Tokens: <span className="font-mono text-indigo-600">{form.maxTokens}</span>
+            <label className="label flex items-center justify-between">
+              <span>Max tokens</span>
+              <span className="kbd">{form.maxTokens}</span>
             </label>
             <input
               type="range"
@@ -217,54 +235,57 @@ export function ConfigForm({ projectId, config, models }: Props) {
               step="128"
               value={form.maxTokens}
               onChange={(e) => set("maxTokens", parseInt(e.target.value))}
-              className="w-full"
+              className="w-full mt-1.5"
             />
           </div>
-          <div className="flex items-center gap-3 pt-6">
+          <label htmlFor="branding" className="flex items-center gap-3 self-end pb-2.5 cursor-pointer">
             <input
               type="checkbox"
               id="branding"
               checked={form.showBranding}
               onChange={(e) => set("showBranding", e.target.checked)}
-              className="w-4 h-4 text-indigo-600 rounded"
+              className="size-4"
             />
-            <label htmlFor="branding" className="text-sm font-medium text-slate-700">
-              Show &ldquo;Powered by BotForge&rdquo;
-            </label>
-          </div>
+            <span className="text-sm font-medium text-ink">Show &ldquo;Powered by BotForge&rdquo;</span>
+          </label>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">System Prompt</label>
+            <label htmlFor="cfg-prompt" className="label">System prompt</label>
             <textarea
+              id="cfg-prompt"
               value={form.systemPrompt}
               onChange={(e) => set("systemPrompt", e.target.value)}
               rows={4}
-              className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none font-mono"
+              className="textarea font-mono text-[0.8125rem]"
             />
           </div>
         </div>
       </section>
 
       {/* Lead capture */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-6">
-        <div className="flex items-start justify-between mb-5">
+      <section className="panel overflow-hidden">
+        <div className="panel-head">
           <div>
-            <h2 className="font-semibold text-slate-800">Lead Capture</h2>
-            <p className="text-xs text-slate-500 mt-1">Let the bot ask for email + phone after solving a query.</p>
+            <h2 className="flex items-center gap-2.5 font-semibold text-ink">
+              <UserPlus className="size-4 text-ember" strokeWidth={1.75} />
+              Lead capture
+            </h2>
+            <p className="hint mt-1">Let the bot ask for email + phone after solving a query.</p>
           </div>
-          <label className="inline-flex items-center gap-2 cursor-pointer">
+          <label className="inline-flex items-center gap-2 cursor-pointer shrink-0">
             <input
               type="checkbox"
               checked={form.leadCaptureEnabled}
               onChange={(e) => set("leadCaptureEnabled", e.target.checked)}
-              className="w-4 h-4 text-indigo-600 rounded"
+              className="size-4"
             />
-            <span className="text-sm font-medium text-slate-700">Enabled</span>
+            <span className="text-sm font-medium text-ink">Enabled</span>
           </label>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div className="panel-pad grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Ask after (user messages): <span className="font-mono text-indigo-600">{form.leadCaptureAfterMessages}</span>
+            <label className="label flex items-center justify-between">
+              <span>Ask after (user messages)</span>
+              <span className="kbd">{form.leadCaptureAfterMessages}</span>
             </label>
             <input
               type="range"
@@ -273,32 +294,40 @@ export function ConfigForm({ projectId, config, models }: Props) {
               step="1"
               value={form.leadCaptureAfterMessages}
               onChange={(e) => set("leadCaptureAfterMessages", parseInt(e.target.value))}
-              className="w-full"
+              className="w-full mt-1.5"
               disabled={!form.leadCaptureEnabled}
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Capture Prompt</label>
+            <label htmlFor="cfg-capture" className="label">Capture prompt</label>
             <textarea
+              id="cfg-capture"
               value={form.leadCapturePrompt}
               onChange={(e) => set("leadCapturePrompt", e.target.value)}
               rows={3}
               disabled={!form.leadCaptureEnabled}
-              className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none disabled:bg-slate-50 disabled:text-slate-400"
+              className="textarea"
             />
           </div>
         </div>
       </section>
 
-      <div className="flex items-center gap-4">
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-60 transition-colors"
-        >
-          {saving ? "Saving..." : "Save changes"}
+      {/* Sticky save bar */}
+      <div className="sticky bottom-0 -mx-1 flex items-center gap-4 rounded-xl border border-line bg-paper/85 backdrop-blur-md px-4 py-3">
+        <button type="submit" disabled={saving} className="btn btn-primary">
+          {saving ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Saving...
+            </>
+          ) : (
+            "Save changes"
+          )}
         </button>
-        {saved && <span className="text-green-600 text-sm font-medium">✓ Saved</span>}
+        {saved && (
+          <span className="inline-flex items-center gap-1.5 text-success text-sm font-medium">
+            <Check className="size-4" strokeWidth={2.25} /> Saved
+          </span>
+        )}
       </div>
     </form>
   );

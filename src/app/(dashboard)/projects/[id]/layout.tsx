@@ -25,9 +25,9 @@ export default async function ProjectLayout({
         projectId={id}
         projectName={project.name}
         projectInitial={project.name[0].toUpperCase()}
-        projectColor={cfg?.primaryColor ?? "#6366f1"}
+        projectColor={cfg?.primaryColor ?? "var(--color-ember)"}
       />
-      <div className="flex-1 min-w-0">{children}</div>
+      <div className="flex-1 min-w-0 md:border-l md:border-line md:pl-8">{children}</div>
     </div>
   );
 }

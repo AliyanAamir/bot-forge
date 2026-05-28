@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { hasProjectAccess, getProjectRole } from "@/lib/project-access";
 import { can } from "@/lib/permissions";
 import { TeamManager } from "@/components/project/TeamManager";
+import { PageHeader } from "@/components/project/PageHeader";
 
 export default async function TeamPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -37,11 +38,10 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Team</h1>
-        <p className="text-slate-500 text-sm mt-1">Invite collaborators to work on this project.</p>
-      </header>
-
+      <PageHeader
+        title="Team"
+        subtitle="Invite collaborators and manage who can do what."
+      />
       <TeamManager
         projectId={id}
         currentUserId={session!.user.id}

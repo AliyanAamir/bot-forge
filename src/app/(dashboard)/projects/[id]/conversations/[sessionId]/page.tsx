@@ -1,8 +1,9 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { formatDate } from "@/lib/utils";
+import { PageHeader } from "@/components/project/PageHeader";
+import { Contact } from "lucide-react";
 
 export default async function ConversationDetailPage({
   params,
@@ -26,48 +27,61 @@ export default async function ConversationDetailPage({
 
   return (
     <div>
-      <div className="mb-6">
-        <Link href={`/projects/${id}/conversations`} className="text-sm text-slate-500 hover:text-slate-700">
-          ← Conversations
-        </Link>
-        <div className="mt-2 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Visitor <span className="font-mono text-base">{chat.visitorId}</span></h1>
-            <p className="text-slate-500 text-sm mt-1">Started {formatDate(chat.createdAt)} · {chat.messages.length} messages</p>
-          </div>
-          {chat.lead && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm min-w-64">
-              <p className="font-semibold text-emerald-800 mb-1">Lead captured</p>
-              {chat.lead.name && <p className="text-emerald-700">{chat.lead.name}</p>}
-              {chat.lead.email && <p className="text-emerald-700">{chat.lead.email}</p>}
-              {chat.lead.phone && <p className="text-emerald-700">{chat.lead.phone}</p>}
-              <p className="text-xs text-emerald-600 mt-2 uppercase tracking-wide">Status: {chat.lead.status}</p>
-            </div>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Conversation"
+        subtitle={`Visitor ${chat.visitorId.slice(0, 18)} · ${chat.messages.length} messages · started ${formatDate(chat.createdAt)}`}
+        backHref={`/projects/${id}/conversations`}
+        backLabel="Conversations"
+      />
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4">
-        {chat.messages.map((m) => (
-          <div
-            key={m.id}
-            className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-xl px-4 py-2.5 rounded-2xl text-sm ${
-                m.role === "user"
-                  ? "bg-indigo-600 text-white rounded-br-sm"
-                  : "bg-slate-100 text-slate-800 rounded-bl-sm"
-              }`}
-            >
-              <p className="whitespace-pre-wrap">{m.content}</p>
-              <p className={`text-[10px] mt-1 ${m.role === "user" ? "text-indigo-200" : "text-slate-400"}`}>
-                {formatDate(m.createdAt)}
-              </p>
+      <div className="grid lg:grid-cols-[1fr_16rem] gap-6 items-start">
+        {/* Transcript */}
+        <div className="panel panel-pad space-y-4">
+          {chat.messages.map((m) => (
+            <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`max-w-xl px-4 py-2.5 rounded-2xl text-sm ${
+                  m.role === "user"
+                    ? "bg-ember text-white rounded-br-sm"
+                    : "bg-sunk text-ink rounded-bl-sm border border-line"
+                }`}
+              >
+                <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                <p className={`text-[10px] mt-1.5 ${m.role === "user" ? "text-white/70" : "text-faint"}`}>
+                  {formatDate(m.createdAt)}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* Lead sidecar */}
+        {chat.lead && (
+          <aside className="panel overflow-hidden lg:sticky lg:top-20">
+            <div className="px-4 py-3 border-b border-line bg-success-soft/50 flex items-center gap-2">
+              <Contact className="size-4 text-success" strokeWidth={1.75} />
+              <span className="font-semibold text-ink text-sm">Lead captured</span>
+            </div>
+            <dl className="p-4 space-y-3 text-sm">
+              {chat.lead.name && <Field k="Name" v={chat.lead.name} />}
+              {chat.lead.email && <Field k="Email" v={chat.lead.email} />}
+              {chat.lead.phone && <Field k="Phone" v={chat.lead.phone} />}
+              <div className="pt-2 border-t border-line">
+                <span className="badge badge-neutral capitalize">{chat.lead.status}</span>
+              </div>
+            </dl>
+          </aside>
+        )}
       </div>
+    </div>
+  );
+}
+
+function Field({ k, v }: { k: string; v: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-faint uppercase tracking-wide">{k}</dt>
+      <dd className="text-ink mt-0.5 break-words">{v}</dd>
     </div>
   );
 }

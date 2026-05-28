@@ -3,8 +3,9 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getProjectRole } from "@/lib/project-access";
 import { can } from "@/lib/permissions";
+import { paginationFromSearchParams, paginate } from "@/lib/pagination";
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -13,12 +14,19 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const project = await db.project.findFirst({ where: { id: projectId, OR: [{ userId: session.user.id }, { members: { some: { userId: session.user.id } } }] } });
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const docs = await db.knowledgeDoc.findMany({
-    where: { projectId },
-    orderBy: { createdAt: "desc" },
-  });
+  const p = paginationFromSearchParams(req.nextUrl.searchParams);
+  const where = { projectId };
+  const [docs, total] = await db.$transaction([
+    db.knowledgeDoc.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: p.skip,
+      take: p.take,
+    }),
+    db.knowledgeDoc.count({ where }),
+  ]);
 
-  return NextResponse.json(docs);
+  return NextResponse.json(paginate(docs, total, p));
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

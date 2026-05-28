@@ -20,17 +20,17 @@ export function IconPicker({ value, color, onChange }: Props) {
             type="button"
             onClick={() => onChange(key)}
             title={icon.label}
-            className={`aspect-square flex items-center justify-center rounded-xl border-2 transition-all ${
+            className={`aspect-square flex items-center justify-center rounded-lg border transition-[border-color,background-color,box-shadow] duration-150 outline-none ${
               active
-                ? "border-indigo-500 ring-2 ring-indigo-200"
-                : "border-slate-200 hover:border-slate-300"
+                ? "border-ember ring-4 ring-ember/15"
+                : "border-line-strong hover:border-line-strong hover:bg-sunk"
             }`}
-            style={active ? { backgroundColor: `${color}10` } : undefined}
+            style={active ? { backgroundColor: `${color}14` } : undefined}
           >
             <svg
               viewBox="0 0 24 24"
               fill="none"
-              stroke={active ? color : "#475569"}
+              stroke={active ? color : "oklch(0.495 0.012 58)"}
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"

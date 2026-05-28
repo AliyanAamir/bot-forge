@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { formatDate } from "@/lib/utils";
 import { hasProjectAccess } from "@/lib/project-access";
+import { BookOpen, MessageSquare, Contact, Users } from "lucide-react";
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -27,55 +28,63 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   });
 
   const stats = [
-    { label: "Knowledge docs", value: project._count.knowledgeDocs, hint: "uploaded sources" },
-    { label: "Conversations", value: project._count.chatSessions, hint: "total sessions" },
-    { label: "Leads", value: project._count.leads, hint: "captured" },
-    { label: "Team", value: project._count.members + 1, hint: "members" },
+    { label: "Knowledge", value: project._count.knowledgeDocs, icon: BookOpen },
+    { label: "Conversations", value: project._count.chatSessions, icon: MessageSquare },
+    { label: "Leads", value: project._count.leads, icon: Contact },
+    { label: "Team", value: project._count.members + 1, icon: Users },
   ];
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Overview</h1>
-        <p className="text-slate-500 text-sm mt-1">
-          {project.description || "Project at a glance."}
+      <header className="mb-7">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">Overview</h1>
+        <p className="text-muted text-sm mt-1">
+          {project.description || "Your chatbot at a glance."}
         </p>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((s) => (
-          <div key={s.label} className="bg-white border border-slate-200 rounded-2xl p-5">
-            <p className="text-3xl font-bold text-slate-900">{s.value}</p>
-            <p className="text-sm font-medium text-slate-700 mt-1">{s.label}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{s.hint}</p>
-          </div>
-        ))}
+      {/* Stat strip: one panel, divided columns (not four identical cards) */}
+      <div className="panel grid grid-cols-2 lg:grid-cols-4 divide-y divide-x divide-line mb-8 overflow-hidden">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <div key={s.label} className="p-5">
+              <div className="flex items-center gap-2 text-muted">
+                <Icon className="size-4 text-faint" strokeWidth={1.75} />
+                <span className="text-xs font-medium uppercase tracking-wide">{s.label}</span>
+              </div>
+              <p className="text-3xl font-semibold text-ink mt-2 tabular-nums">{s.value}</p>
+            </div>
+          );
+        })}
       </div>
 
-      <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="font-semibold text-slate-800">Recent activity</h2>
-          <span className="text-xs text-slate-500">Created {formatDate(project.createdAt)}</span>
+      <section className="panel overflow-hidden">
+        <div className="panel-head">
+          <h2 className="font-semibold text-ink">Recent activity</h2>
+          <span className="text-xs text-faint">Created {formatDate(project.createdAt)}</span>
         </div>
         {recentSessions.length === 0 ? (
-          <div className="px-5 py-12 text-center text-slate-500 text-sm">
-            No conversations yet. Embed your widget to start collecting chats.
+          <div className="px-6 py-14 text-center">
+            <p className="text-muted text-sm">No conversations yet.</p>
+            <p className="text-faint text-xs mt-1">Embed your widget to start collecting chats.</p>
           </div>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-line">
             {recentSessions.map((s) => (
-              <li key={s.id} className="px-5 py-3 flex items-center justify-between text-sm">
-                <div>
-                  <p className="text-slate-800 font-mono text-xs">{s.visitorId.slice(0, 14)}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{s._count.messages} messages</p>
+              <li key={s.id} className="px-6 py-3.5 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-ink font-mono text-xs truncate">{s.visitorId.slice(0, 18)}</p>
+                  <p className="text-xs text-faint mt-0.5">{s._count.messages} messages</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 shrink-0">
                   {s.lead && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">
+                    <span className="badge badge-success">
+                      <Contact className="size-3" strokeWidth={2} />
                       lead
                     </span>
                   )}
-                  <span className="text-xs text-slate-500">{formatDate(s.updatedAt)}</span>
+                  <span className="text-xs text-faint">{formatDate(s.updatedAt)}</span>
                 </div>
               </li>
             ))}

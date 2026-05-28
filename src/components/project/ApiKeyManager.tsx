@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, EyeOff, Copy, Check, RefreshCw, Ban, RotateCcw, ShieldAlert, Loader2 } from "lucide-react";
 
 interface KeyState {
   apiKey: string;
@@ -57,107 +58,75 @@ export function ApiKeyManager({ projectId, canManage, initial }: Props) {
   return (
     <div className="space-y-5">
       {revoked && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm">
-          <p className="font-semibold text-red-800">This key is revoked</p>
-          <p className="text-red-700 mt-1">
-            All widget requests using this key will be rejected. Reactivate it or rotate to issue a new one.
+        <div className="rounded-xl border border-danger/30 p-4 text-sm" style={{ backgroundColor: "var(--color-danger-soft)" }}>
+          <p className="font-semibold text-ink flex items-center gap-2">
+            <ShieldAlert className="size-4 text-danger" strokeWidth={1.75} /> This key is revoked
+          </p>
+          <p className="text-muted mt-1 ml-6">
+            All widget requests using this key are rejected. Reactivate it or rotate to issue a new one.
           </p>
         </div>
       )}
 
-      <div className="bg-slate-900 rounded-2xl p-6">
+      {/* Key display — warm graphite */}
+      <div className="rounded-xl p-6 border border-line" style={{ backgroundColor: "oklch(0.255 0.012 56)" }}>
         <div className="flex items-center justify-between mb-3">
-          <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">Key</span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setRevealed((v) => !v)}
-              className="text-slate-300 hover:text-white text-xs font-medium px-2 py-1 rounded"
-            >
-              {revealed ? "Hide" : "Reveal"}
+          <span className="text-white/55 text-xs font-medium uppercase tracking-wide">Secret key</span>
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => setRevealed((v) => !v)} className="inline-flex items-center gap-1.5 text-white/75 hover:text-white text-xs font-medium px-2 py-1 rounded-md hover:bg-white/10 transition-colors">
+              {revealed ? (<><EyeOff className="size-3.5" strokeWidth={1.75} /> Hide</>) : (<><Eye className="size-3.5" strokeWidth={1.75} /> Reveal</>)}
             </button>
-            <button
-              type="button"
-              onClick={copy}
-              className="text-indigo-300 hover:text-indigo-200 text-xs font-medium px-2 py-1 rounded"
-            >
-              {copied ? "✓ Copied" : "Copy"}
+            <button type="button" onClick={copy} className="inline-flex items-center gap-1.5 text-white/75 hover:text-white text-xs font-medium px-2 py-1 rounded-md hover:bg-white/10 transition-colors">
+              {copied ? (<><Check className="size-3.5" strokeWidth={2.25} /> Copied</>) : (<><Copy className="size-3.5" strokeWidth={1.75} /> Copy</>)}
             </button>
           </div>
         </div>
-        <code className="text-green-400 text-sm font-mono break-all block">
+        <code className="text-sm font-mono break-all block" style={{ color: "oklch(0.86 0.10 70)" }}>
           {revealed ? state.apiKey : mask(state.apiKey)}
         </code>
-        <div className="flex gap-4 mt-4 text-xs text-slate-500">
-          {state.apiKeyRotatedAt && (
-            <span>Rotated: {new Date(state.apiKeyRotatedAt).toLocaleString()}</span>
-          )}
-          {state.apiKeyRevokedAt && (
-            <span className="text-red-400">Revoked: {new Date(state.apiKeyRevokedAt).toLocaleString()}</span>
-          )}
+        <div className="flex flex-wrap gap-4 mt-4 text-xs text-white/45">
+          {state.apiKeyRotatedAt && <span>Rotated {new Date(state.apiKeyRotatedAt).toLocaleString()}</span>}
+          {state.apiKeyRevokedAt && <span className="text-danger">Revoked {new Date(state.apiKeyRevokedAt).toLocaleString()}</span>}
         </div>
       </div>
 
       {canManage ? (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6">
-          <h2 className="font-semibold text-slate-800 mb-1">Manage</h2>
-          <p className="text-sm text-slate-500 mb-5">
-            Rotation invalidates the old key immediately. Update your embed snippet after rotating.
-          </p>
-          <div className="flex flex-wrap gap-3">
+        <div className="panel overflow-hidden">
+          <div className="panel-head">
+            <div>
+              <h2 className="font-semibold text-ink">Manage</h2>
+              <p className="hint mt-0.5">Rotation invalidates the old key immediately. Update your embed after rotating.</p>
+            </div>
+          </div>
+          <div className="panel-pad flex flex-wrap gap-3">
             {!confirmRotate ? (
-              <button
-                type="button"
-                onClick={() => setConfirmRotate(true)}
-                disabled={busy !== null}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-              >
-                Rotate key
+              <button type="button" onClick={() => setConfirmRotate(true)} disabled={busy !== null} className="btn btn-primary">
+                <RefreshCw className="size-4" strokeWidth={1.75} /> Rotate key
               </button>
             ) : (
-              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                <span className="text-sm text-amber-800">Confirm rotate? Existing embeds will break.</span>
-                <button
-                  type="button"
-                  onClick={() => action("rotate")}
-                  disabled={busy !== null}
-                  className="px-3 py-1 bg-amber-600 text-white rounded-md text-xs font-semibold hover:bg-amber-700 disabled:opacity-50"
-                >
-                  {busy === "rotate" ? "Rotating…" : "Yes, rotate"}
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-warning/40 px-3 py-2" style={{ backgroundColor: "var(--color-warning-soft)" }}>
+                <span className="text-sm text-ink">Confirm rotate? Existing embeds will break.</span>
+                <button type="button" onClick={() => action("rotate")} disabled={busy !== null} className="btn btn-primary btn-sm">
+                  {busy === "rotate" ? (<><Loader2 className="size-3.5 animate-spin" /> Rotating…</>) : "Yes, rotate"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmRotate(false)}
-                  className="px-3 py-1 text-amber-700 text-xs font-medium"
-                >
-                  Cancel
-                </button>
+                <button type="button" onClick={() => setConfirmRotate(false)} className="btn btn-ghost btn-sm">Cancel</button>
               </div>
             )}
 
             {revoked ? (
-              <button
-                type="button"
-                onClick={() => action("reactivate")}
-                disabled={busy !== null}
-                className="px-4 py-2 border border-emerald-300 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-50 disabled:opacity-50"
-              >
-                {busy === "reactivate" ? "Reactivating…" : "Reactivate"}
+              <button type="button" onClick={() => action("reactivate")} disabled={busy !== null} className="btn btn-secondary">
+                {busy === "reactivate" ? (<><Loader2 className="size-4 animate-spin" /> Reactivating…</>) : (<><RotateCcw className="size-4" strokeWidth={1.75} /> Reactivate</>)}
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => action("revoke")}
-                disabled={busy !== null}
-                className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50"
-              >
-                {busy === "revoke" ? "Revoking…" : "Revoke"}
+              <button type="button" onClick={() => action("revoke")} disabled={busy !== null} className="btn btn-secondary hover:!text-danger hover:!border-danger/40">
+                {busy === "revoke" ? (<><Loader2 className="size-4 animate-spin" /> Revoking…</>) : (<><Ban className="size-4" strokeWidth={1.75} /> Revoke</>)}
               </button>
             )}
           </div>
         </div>
       ) : (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
+        <div className="rounded-xl border border-warning/30 p-4 text-sm text-muted flex items-center gap-2" style={{ backgroundColor: "var(--color-warning-soft)" }}>
+          <ShieldAlert className="size-4 text-warning shrink-0" strokeWidth={1.75} />
           Only project owners and admins can rotate or revoke the API key.
         </div>
       )}

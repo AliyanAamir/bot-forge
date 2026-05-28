@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { LogoMark } from "@/components/brand/Logo";
+import { Loader2, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,57 +33,61 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="inline-flex w-12 h-12 rounded-xl bg-indigo-600 items-center justify-center mb-4">
-            <span className="text-white text-xl font-bold">B</span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
-          <p className="text-slate-500 mt-1 text-sm">Sign in to your BotForge account</p>
+        <div className="flex flex-col items-center text-center mb-8">
+          <LogoMark className="size-12 rounded-xl mb-4" />
+          <h1 className="text-2xl font-semibold tracking-tight text-ink">Welcome back</h1>
+          <p className="text-muted mt-1.5 text-sm">Sign in to your BotForge workshop</p>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+        <div className="panel panel-pad shadow-[0_1px_3px_oklch(0.4_0.03_60/0.06)]">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+              <div className="badge-danger rounded-lg border px-4 py-3 text-sm font-medium w-full block">
                 {error}
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+              <label htmlFor="email" className="label">Email</label>
               <input
+                id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="input"
                 placeholder="you@example.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+              <label htmlFor="password" className="label">Password</label>
               <input
+                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-3.5 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="input"
                 placeholder="••••••••"
               />
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-60"
-            >
-              {loading ? "Signing in..." : "Sign in"}
+            <button type="submit" disabled={loading} className="btn btn-primary w-full mt-1">
+              {loading ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" /> Signing in...
+                </>
+              ) : (
+                <>
+                  Sign in <ArrowRight className="size-4" strokeWidth={2} />
+                </>
+              )}
             </button>
           </form>
         </div>
 
-        <p className="text-center text-sm text-slate-500 mt-6">
-          Access to BotForge is invite-only. Ask your team admin for an invitation.
+        <p className="text-center text-sm text-faint mt-6 leading-relaxed">
+          Access is invite-only. Ask your team admin for an invitation.
         </p>
       </div>
     </div>

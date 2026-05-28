@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { hasProjectAccess, getProjectRole } from "@/lib/project-access";
 import { ApiKeyManager } from "@/components/project/ApiKeyManager";
+import { PageHeader } from "@/components/project/PageHeader";
 
 export default async function ApiKeyPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -22,13 +23,10 @@ export default async function ApiKeyPage({ params }: { params: Promise<{ id: str
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">API Key</h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Used by your embed snippet to authenticate the chatbot widget.
-        </p>
-      </header>
-
+      <PageHeader
+        title="API key"
+        subtitle="Authenticates your embed snippet with the chatbot API."
+      />
       <ApiKeyManager
         projectId={id}
         canManage={canManage}

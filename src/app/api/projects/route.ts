@@ -2,20 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generateApiKey } from "@/lib/utils";
+import { paginationFromSearchParams, paginate } from "@/lib/pagination";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const projects = await db.project.findMany({
-    where: { userId: session.user.id },
-    include: { config: true, _count: { select: { knowledgeDocs: true, chatSessions: true } } },
-    orderBy: { createdAt: "desc" },
-  });
+  const p = paginationFromSearchParams(req.nextUrl.searchParams);
+  const where = {
+    OR: [
+      { userId: session.user.id },
+      { members: { some: { userId: session.user.id } } },
+    ],
+  };
+  const [projects, total] = await db.$transaction([
+    db.project.findMany({
+      where,
+      include: { config: true, _count: { select: { knowledgeDocs: true, chatSessions: true } } },
+      orderBy: { createdAt: "desc" },
+      skip: p.skip,
+      take: p.take,
+    }),
+    db.project.count({ where }),
+  ]);
 
-  return NextResponse.json(projects);
+  return NextResponse.json(paginate(projects, total, p));
 }
 
 export async function POST(req: NextRequest) {
