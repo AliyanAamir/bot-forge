@@ -1,12 +1,17 @@
-/* BotForge Widget Styles — scoped to [data-botforge] */
-[data-botforge] * {
+/* BotForge Widget Styles
+ * This file is inlined into botforge.js as a Shadow DOM stylesheet.
+ * No [data-botforge] prefix needed — the shadow root provides full isolation.
+ * Edit here and sync the STYLES string in botforge.js when making changes.
+ */
+
+* {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-[data-botforge] .bf-fab {
+.bf-fab {
   position: fixed;
   z-index: 2147483647;
   width: 56px;
@@ -21,10 +26,10 @@
   justify-content: center;
   transition: transform .2s, box-shadow .2s;
 }
-[data-botforge] .bf-fab:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(0,0,0,.25); }
-[data-botforge] .bf-fab svg { width: 26px; height: 26px; }
+.bf-fab:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+.bf-fab svg { width: 26px; height: 26px; }
 
-[data-botforge] .bf-window {
+.bf-window {
   position: fixed;
   z-index: 2147483646;
   background: #fff;
@@ -35,9 +40,9 @@
   overflow: hidden;
   transition: opacity .25s, transform .25s;
 }
-[data-botforge] .bf-window.bf-hidden { opacity: 0; pointer-events: none; transform: translateY(12px) scale(.97); }
+.bf-window.bf-hidden { opacity: 0; pointer-events: none; transform: translateY(12px) scale(.97); }
 
-[data-botforge] .bf-header {
+.bf-header {
   background: var(--bf-primary, #6366f1);
   color: #fff;
   padding: 14px 16px;
@@ -45,21 +50,21 @@
   align-items: center;
   gap: 10px;
 }
-[data-botforge] .bf-header-avatar {
+.bf-header-avatar {
   width: 32px; height: 32px; border-radius: 50%;
   background: rgba(255,255,255,.25);
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 14px;
 }
-[data-botforge] .bf-header-name { font-weight: 600; font-size: 15px; }
-[data-botforge] .bf-header-status { font-size: 11px; opacity: .8; }
-[data-botforge] .bf-close {
+.bf-header-name { font-weight: 600; font-size: 15px; }
+.bf-header-status { font-size: 11px; opacity: .8; }
+.bf-close {
   margin-left: auto; background: none; border: none; cursor: pointer;
   color: #fff; opacity: .7; font-size: 20px; line-height: 1; padding: 2px 4px;
 }
-[data-botforge] .bf-close:hover { opacity: 1; }
+.bf-close:hover { opacity: 1; }
 
-[data-botforge] .bf-messages {
+.bf-messages {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
@@ -69,69 +74,71 @@
   background: var(--bf-bg, #f8f9fb);
 }
 
-[data-botforge] .bf-msg {
+.bf-msg {
   max-width: 82%;
   padding: 10px 14px;
   border-radius: 14px;
   font-size: 14px;
   line-height: 1.5;
 }
-[data-botforge] .bf-msg.bf-bot {
+.bf-msg.bf-bot {
   background: #fff;
   color: var(--bf-text, #1e293b);
   border-bottom-left-radius: 4px;
   align-self: flex-start;
   box-shadow: 0 1px 3px rgba(0,0,0,.08);
 }
-[data-botforge] .bf-msg.bf-user {
+.bf-msg.bf-user {
   background: var(--bf-primary, #6366f1);
   color: #fff;
   border-bottom-right-radius: 4px;
   align-self: flex-end;
 }
 
-[data-botforge] .bf-typing {
+.bf-typing {
   display: flex; gap: 4px; align-items: center; padding: 12px 14px;
   background: #fff; border-radius: 14px; border-bottom-left-radius: 4px;
   align-self: flex-start; box-shadow: 0 1px 3px rgba(0,0,0,.08);
 }
-[data-botforge] .bf-typing span {
+.bf-typing span {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--bf-primary, #6366f1); opacity: .4;
   animation: bf-bounce .9s ease-in-out infinite;
 }
-[data-botforge] .bf-typing span:nth-child(2) { animation-delay: .15s; }
-[data-botforge] .bf-typing span:nth-child(3) { animation-delay: .3s; }
+.bf-typing span:nth-child(2) { animation-delay: .15s; }
+.bf-typing span:nth-child(3) { animation-delay: .3s; }
 @keyframes bf-bounce {
   0%,80%,100% { transform: translateY(0); opacity: .4; }
   40% { transform: translateY(-6px); opacity: 1; }
 }
 
-[data-botforge] .bf-input-row {
+.bf-input-row {
   display: flex; gap: 8px; padding: 12px 14px;
   background: #fff; border-top: 1px solid #e8eaf0;
 }
-[data-botforge] .bf-input {
+.bf-input {
   flex: 1; border: 1px solid #d1d5db; border-radius: 10px;
   padding: 9px 13px; font-size: 14px; outline: none;
   resize: none; max-height: 120px; line-height: 1.4;
-  color: var(--bf-text, #1e293b);
+  color: #1e293b;
+  background: #fff;
+  -webkit-text-fill-color: #1e293b;
 }
-[data-botforge] .bf-input:focus { border-color: var(--bf-primary, #6366f1); }
-[data-botforge] .bf-send {
+.bf-input:focus { border-color: var(--bf-primary, #6366f1); }
+.bf-send {
   background: var(--bf-primary, #6366f1); border: none; border-radius: 10px;
   color: #fff; cursor: pointer; width: 38px; height: 38px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; align-self: flex-end;
   transition: opacity .15s;
 }
-[data-botforge] .bf-send:hover { opacity: .85; }
-[data-botforge] .bf-send:disabled { opacity: .45; cursor: default; }
-[data-botforge] .bf-send svg { width: 18px; height: 18px; fill: #fff; }
+.bf-send:hover { opacity: .85; }
+.bf-send:disabled { opacity: .45; cursor: default; }
+.bf-send svg { width: 18px; height: 18px; fill: #fff; }
 
-[data-botforge] .bf-branding {
+.bf-branding {
   text-align: center; font-size: 11px; color: #9ca3af;
   padding: 6px; background: #fff; border-top: 1px solid #f0f0f0;
 }
-[data-botforge] .bf-branding a { color: inherit; text-decoration: none; }
-[data-botforge] .bf-branding a:hover { text-decoration: underline; }
+.bf-branding a { color: inherit; text-decoration: none; }
+.bf-branding a:hover { text-decoration: underline; }
