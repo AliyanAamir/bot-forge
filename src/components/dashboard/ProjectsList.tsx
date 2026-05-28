@@ -1,13 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
-import { useQueryClient } from "@tanstack/react-query";
-import { useProjects, PAGE_SIZE } from "@/lib/api/hooks";
-import { qk } from "@/lib/api/keys";
-import { apiGet, listQuery } from "@/lib/api/client";
-import type { Paginated, ProjectListItem } from "@/lib/api/types";
-import { usePageParam, ClientPager } from "@/components/ui/ClientPager";
+import { useProjectsList } from "@/lib/api/hooks";
+import { ClientPager } from "@/components/ui/ClientPager";
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { QueryError } from "@/components/ui/QueryState";
 import { CreateProjectButton } from "./CreateProjectButton";
@@ -15,23 +10,8 @@ import { BookOpen, MessageSquare, ChevronRight, Bot } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 export function ProjectsList() {
-  const page = usePageParam();
-  const qc = useQueryClient();
-  const { data, isPending, isError, error, refetch, isPlaceholderData } = useProjects(page);
-
-  // Prefetch the next page so forward navigation is instant.
-  const totalPages = data?.totalPages ?? 1;
-  useEffect(() => {
-    if (page < totalPages) {
-      qc.prefetchQuery({
-        queryKey: qk.projects(page + 1),
-        queryFn: () =>
-          apiGet<Paginated<ProjectListItem>>(`/api/projects${listQuery({ page: page + 1, pageSize: PAGE_SIZE })}`),
-      });
-    }
-  }, [page, totalPages, qc]);
-
-  const total = data?.total ?? 0;
+  const { items, page, total, totalPages, pageSize, isLoading, isError, error, refetch, isPlaceholder } =
+    useProjectsList();
 
   return (
     <div>
@@ -39,7 +19,7 @@ export function ProjectsList() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink">Projects</h1>
           <p className="text-muted mt-1 text-sm">
-            {isPending
+            {isLoading
               ? "Loading your workshop…"
               : total === 0
                 ? "Your workshop is empty."
@@ -49,10 +29,10 @@ export function ProjectsList() {
         {total > 0 && <CreateProjectButton />}
       </div>
 
-      {isPending ? (
+      {isLoading ? (
         <ListSkeleton rows={5} />
       ) : isError ? (
-        <QueryError message={error.message} onRetry={() => refetch()} />
+        <QueryError message={error?.message} onRetry={refetch} />
       ) : total === 0 ? (
         <div className="panel flex flex-col items-center text-center px-6 py-20">
           <span className="inline-flex size-14 items-center justify-center rounded-2xl bg-ember-soft text-ember-strong mb-5">
@@ -67,9 +47,9 @@ export function ProjectsList() {
       ) : (
         <>
           <ul
-            className={`panel divide-y divide-line overflow-hidden ${isPlaceholderData ? "opacity-60 transition-opacity" : "transition-opacity"}`}
+            className={`panel divide-y divide-line overflow-hidden ${isPlaceholder ? "opacity-60 transition-opacity" : "transition-opacity"}`}
           >
-            {data.data.map((p) => (
+            {items.map((p) => (
               <li key={p.id}>
                 <Link
                   href={`/projects/${p.id}`}
@@ -114,12 +94,12 @@ export function ProjectsList() {
 
           <ClientPager
             page={page}
-            totalPages={data.totalPages}
+            totalPages={totalPages}
             total={total}
-            pageSize={data.pageSize}
+            pageSize={pageSize}
             basePath="/dashboard"
             noun="projects"
-            busy={isPlaceholderData}
+            busy={isPlaceholder}
           />
         </>
       )}

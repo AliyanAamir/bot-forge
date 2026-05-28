@@ -1,40 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
 import Link from "next/link";
-import { useQueryClient } from "@tanstack/react-query";
-import { useConversations, PAGE_SIZE } from "@/lib/api/hooks";
-import { qk } from "@/lib/api/keys";
-import { apiGet, listQuery } from "@/lib/api/client";
-import type { Paginated, ConversationListItem } from "@/lib/api/types";
-import { usePageParam, ClientPager } from "@/components/ui/ClientPager";
+import { useConversationsList } from "@/lib/api/hooks";
+import { ClientPager } from "@/components/ui/ClientPager";
 import { TableSkeleton } from "@/components/ui/Skeleton";
 import { QueryError } from "@/components/ui/QueryState";
 import { MessageSquare, User, Bot, Contact } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 export function ConversationsList({ projectId }: { projectId: string }) {
-  const page = usePageParam();
-  const qc = useQueryClient();
-  const { data, isPending, isError, error, refetch, isPlaceholderData } = useConversations(projectId, page);
+  const { items, page, total, totalPages, pageSize, isLoading, isError, error, refetch, isPlaceholder } =
+    useConversationsList(projectId);
 
-  const totalPages = data?.totalPages ?? 1;
-  useEffect(() => {
-    if (page < totalPages) {
-      qc.prefetchQuery({
-        queryKey: qk.conversations(projectId, page + 1),
-        queryFn: () =>
-          apiGet<Paginated<ConversationListItem>>(
-            `/api/projects/${projectId}/sessions${listQuery({ page: page + 1, pageSize: PAGE_SIZE })}`,
-          ),
-      });
-    }
-  }, [page, totalPages, projectId, qc]);
+  if (isLoading) return <TableSkeleton rows={8} cols={5} />;
+  if (isError) return <QueryError message={error?.message} onRetry={refetch} />;
 
-  if (isPending) return <TableSkeleton rows={8} cols={5} />;
-  if (isError) return <QueryError message={error.message} onRetry={() => refetch()} />;
-
-  if (data.total === 0) {
+  if (total === 0) {
     return (
       <div className="panel flex flex-col items-center text-center px-6 py-16">
         <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-sunk text-faint mb-4">
@@ -48,7 +29,7 @@ export function ConversationsList({ projectId }: { projectId: string }) {
 
   return (
     <>
-      <div className={`panel overflow-hidden ${isPlaceholderData ? "opacity-60 transition-opacity" : "transition-opacity"}`}>
+      <div className={`panel overflow-hidden ${isPlaceholder ? "opacity-60 transition-opacity" : "transition-opacity"}`}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -61,7 +42,7 @@ export function ConversationsList({ projectId }: { projectId: string }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {data.data.map((s) => (
+              {items.map((s) => (
                 <tr key={s.id} className="hover:bg-sunk/50 transition-colors">
                   <td className="px-5 py-3">
                     <Link
@@ -106,12 +87,12 @@ export function ConversationsList({ projectId }: { projectId: string }) {
 
       <ClientPager
         page={page}
-        totalPages={data.totalPages}
-        total={data.total}
-        pageSize={data.pageSize}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
         basePath={`/projects/${projectId}/conversations`}
         noun="conversations"
-        busy={isPlaceholderData}
+        busy={isPlaceholder}
       />
     </>
   );

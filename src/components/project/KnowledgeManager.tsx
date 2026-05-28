@@ -1,12 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useKnowledge, useAddKnowledge, useDeleteKnowledge, PAGE_SIZE } from "@/lib/api/hooks";
-import { qk } from "@/lib/api/keys";
-import { apiGet, listQuery } from "@/lib/api/client";
-import type { Paginated, KnowledgeListItem } from "@/lib/api/types";
-import { usePageParam, ClientPager } from "@/components/ui/ClientPager";
+import { useState } from "react";
+import { useKnowledgeList, useAddKnowledge, useDeleteKnowledge } from "@/lib/api/hooks";
+import { ClientPager } from "@/components/ui/ClientPager";
 import { ListSkeleton } from "@/components/ui/Skeleton";
 import { QueryError } from "@/components/ui/QueryState";
 import { formatDate } from "@/lib/utils";
@@ -15,30 +11,17 @@ import { Plus, Trash2, FileText, Loader2, Inbox, ExternalLink } from "lucide-rea
 const TYPES = ["text", "faq", "policy", "guide"];
 
 export function KnowledgeManager({ projectId }: { projectId: string }) {
-  const page = usePageParam();
-  const qc = useQueryClient();
-  const { data, isPending, isError, error, refetch, isPlaceholderData } = useKnowledge(projectId, page);
+  const { items, page, total, totalPages, pageSize, isLoading, isError, error, refetch, isPlaceholder } =
+    useKnowledgeList(projectId);
   const addDoc = useAddKnowledge(projectId);
-  const deleteDoc = useDeleteKnowledge(projectId, page);
+  const deleteDoc = useDeleteKnowledge(projectId);
 
+  // Form input is ephemeral UI state — not server data — so useState is correct here.
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [source, setSource] = useState("");
   const [type, setType] = useState("text");
-
-  const totalPages = data?.totalPages ?? 1;
-  useEffect(() => {
-    if (page < totalPages) {
-      qc.prefetchQuery({
-        queryKey: qk.knowledge(projectId, page + 1),
-        queryFn: () =>
-          apiGet<Paginated<KnowledgeListItem>>(
-            `/api/knowledge/${projectId}${listQuery({ page: page + 1, pageSize: PAGE_SIZE })}`,
-          ),
-      });
-    }
-  }, [page, totalPages, projectId, qc]);
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +41,6 @@ export function KnowledgeManager({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-6">
-      {/* Add form / trigger */}
       {showForm ? (
         <section className="panel overflow-hidden">
           <div className="panel-head">
@@ -113,12 +95,11 @@ export function KnowledgeManager({ projectId }: { projectId: string }) {
         </button>
       )}
 
-      {/* Doc list */}
-      {isPending ? (
+      {isLoading ? (
         <ListSkeleton rows={5} />
       ) : isError ? (
-        <QueryError message={error.message} onRetry={() => refetch()} />
-      ) : data.total === 0 ? (
+        <QueryError message={error?.message} onRetry={refetch} />
+      ) : total === 0 ? (
         <div className="panel flex flex-col items-center text-center px-6 py-14">
           <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-sunk text-faint mb-3">
             <Inbox className="size-6" strokeWidth={1.5} />
@@ -128,8 +109,8 @@ export function KnowledgeManager({ projectId }: { projectId: string }) {
         </div>
       ) : (
         <>
-          <div className={`panel divide-y divide-line overflow-hidden ${isPlaceholderData ? "opacity-60 transition-opacity" : "transition-opacity"}`}>
-            {data.data.map((doc) => {
+          <div className={`panel divide-y divide-line overflow-hidden ${isPlaceholder ? "opacity-60 transition-opacity" : "transition-opacity"}`}>
+            {items.map((doc) => {
               const deleting = deleteDoc.isPending && deleteDoc.variables === doc.id;
               return (
                 <div key={doc.id} className="flex items-start gap-4 px-5 py-4">
@@ -168,12 +149,12 @@ export function KnowledgeManager({ projectId }: { projectId: string }) {
 
           <ClientPager
             page={page}
-            totalPages={data.totalPages}
-            total={data.total}
-            pageSize={data.pageSize}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
             basePath={`/projects/${projectId}/knowledge`}
             noun="documents"
-            busy={isPlaceholderData}
+            busy={isPlaceholder}
           />
         </>
       )}

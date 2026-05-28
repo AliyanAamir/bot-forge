@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { INVITABLE_ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, type ProjectRole } from "@/lib/permissions";
-import { useInvites, useSendInvite, useRevokeInvite } from "@/lib/api/hooks";
-import { usePageParam, ClientPager } from "@/components/ui/ClientPager";
+import { useInvitesList, useSendInvite, useRevokeInvite, useRemoveMember } from "@/lib/api/hooks";
+import { ClientPager } from "@/components/ui/ClientPager";
 import { Send, Copy, Loader2, Crown } from "lucide-react";
 
 interface UserLite {
@@ -34,13 +34,14 @@ function initials(u: UserLite) {
 
 export function TeamManager({ projectId, currentUserId, viewerRole, owner, members }: Props) {
   const router = useRouter();
-  const page = usePageParam();
   const canManage = viewerRole === "owner" || viewerRole === "admin";
 
-  const invitesQuery = useInvites(projectId, page, canManage);
+  const invites = useInvitesList(projectId, canManage);
   const sendInvite = useSendInvite(projectId);
-  const revokeInvite = useRevokeInvite(projectId, page);
+  const revokeInvite = useRevokeInvite(projectId);
+  const removeMemberMut = useRemoveMember(projectId);
 
+  // Form input + transient toast — ephemeral UI state, not server data.
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Exclude<ProjectRole, "owner">>("viewer");
   const [info, setInfo] = useState("");
@@ -59,11 +60,14 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
     );
   }
 
-  async function removeMember(userId: string, self: boolean) {
+  function removeMember(userId: string, self: boolean) {
     if (!confirm(self ? "Leave this project?" : "Remove this member?")) return;
-    await fetch(`/api/projects/${projectId}/members/${userId}`, { method: "DELETE" });
-    if (self) router.push("/dashboard");
-    else router.refresh();
+    removeMemberMut.mutate(userId, {
+      onSuccess: () => {
+        if (self) router.push("/dashboard");
+        else router.refresh();
+      },
+    });
   }
 
   async function copyLink(token: string) {
@@ -72,8 +76,6 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
     setInfo("Invite link copied.");
     setTimeout(() => setInfo(""), 1800);
   }
-
-  const invites = invitesQuery.data;
 
   return (
     <div className="space-y-6">
@@ -146,11 +148,11 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
         </ul>
       </section>
 
-      {canManage && invites && invites.total > 0 && (
+      {canManage && invites.total > 0 && (
         <section className="panel overflow-hidden">
           <div className="panel-head"><h2 className="font-semibold text-ink">Pending invites</h2></div>
-          <ul className={`divide-y divide-line ${invitesQuery.isPlaceholderData ? "opacity-60 transition-opacity" : ""}`}>
-            {invites.data.map((i) => {
+          <ul className={`divide-y divide-line ${invites.isPlaceholder ? "opacity-60 transition-opacity" : ""}`}>
+            {invites.items.map((i) => {
               const revoking = revokeInvite.isPending && revokeInvite.variables === i.id;
               return (
                 <li key={i.id} className="px-5 py-3.5 flex items-center justify-between gap-4">
@@ -176,13 +178,13 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
           {invites.totalPages > 1 && (
             <div className="px-5 pb-4">
               <ClientPager
-                page={page}
+                page={invites.page}
                 totalPages={invites.totalPages}
                 total={invites.total}
                 pageSize={invites.pageSize}
                 basePath={`/projects/${projectId}/team`}
                 noun="invites"
-                busy={invitesQuery.isPlaceholderData}
+                busy={invites.isPlaceholder}
               />
             </div>
           )}

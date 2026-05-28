@@ -16,24 +16,27 @@ function mask(key: string) {
 }
 
 export function ApiKeyManager({ projectId, canManage, initial }: Props) {
-  const [state, setState] = useState(initial);
+  const keyAction = useApiKeyAction(projectId);
+
+  // Server state is the React Query data point (latest mutation response),
+  // falling back to the server-rendered `initial`. No useState mirror.
+  const state = keyAction.data ?? initial;
+  const busy = keyAction.isPending ? keyAction.variables : null;
+  const revoked = !!state.apiKeyRevokedAt;
+
+  // Pure UI state — fine in useState.
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmRotate, setConfirmRotate] = useState(false);
 
-  const keyAction = useApiKeyAction(projectId);
-  const revoked = !!state.apiKeyRevokedAt;
-
   function run(action: "rotate" | "revoke" | "reactivate") {
     keyAction.mutate(action, {
-      onSuccess: (data) => {
-        setState(data);
+      onSuccess: () => {
         if (action === "rotate") setRevealed(true);
         setConfirmRotate(false);
       },
     });
   }
-  const busy = keyAction.isPending ? keyAction.variables : null;
 
   async function copy() {
     await navigator.clipboard.writeText(state.apiKey);
