@@ -59,7 +59,7 @@ export function ConfigForm({ projectId, config, models }: Props) {
     leadCapturePrompt:
       config?.leadCapturePrompt ??
       "After helping the visitor, politely ask for their name, email, and phone number so a team member can follow up.",
-    allowedDomains: config?.allowedDomains ?? "",
+    allowedDomains: (config?.allowedDomains ?? "").split(",").map((s) => s.trim()).filter(Boolean).join("\n"),
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -69,14 +69,22 @@ export function ConfigForm({ projectId, config, models }: Props) {
     setSaved(false);
   }
 
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
 
+    const payload = {
+      ...form,
+      allowedDomains: form.allowedDomains
+        ? form.allowedDomains.split("\n").map((s) => s.trim()).filter(Boolean).join(",")
+        : null,
+    };
+
     await fetch(`/api/projects/${projectId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ config: form }),
+      body: JSON.stringify({ config: payload }),
     });
 
     setSaving(false);
