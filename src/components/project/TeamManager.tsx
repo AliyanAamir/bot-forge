@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { INVITABLE_ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, type ProjectRole } from "@/lib/permissions";
-import { useInvitesList, useSendInvite, useRevokeInvite, useRemoveMember } from "@/lib/api/hooks";
+import { useInvitesList, useSendInvite, useRevokeInvite, useRemoveMember, useResetMemberPassword } from "@/lib/api/hooks";
 import { ClientPager } from "@/components/ui/ClientPager";
-import { Send, Copy, Loader2, Crown } from "lucide-react";
+import { Send, Copy, Loader2, Crown, KeyRound } from "lucide-react";
 
 interface UserLite {
   id: string;
@@ -40,6 +40,7 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
   const sendInvite = useSendInvite(projectId);
   const revokeInvite = useRevokeInvite(projectId);
   const removeMemberMut = useRemoveMember(projectId);
+  const resetPasswordMut = useResetMemberPassword(projectId);
 
   // Form input + transient toast — ephemeral UI state, not server data.
   const [email, setEmail] = useState("");
@@ -125,6 +126,7 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
           <MemberRow user={owner} badge={<span className="badge badge-ember"><Crown className="size-3" strokeWidth={2} /> owner</span>} />
           {members.map((m) => {
             const self = m.user.id === currentUserId;
+            const isResetting = resetPasswordMut.isPending && resetPasswordMut.variables === m.user.id;
             return (
               <MemberRow
                 key={m.id}
@@ -133,13 +135,34 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
                 badge={<span className="badge badge-neutral capitalize">{m.role}</span>}
                 action={
                   (canManage || self) && (
-                    <button
-                      type="button"
-                      onClick={() => removeMember(m.user.id, self)}
-                      className="text-xs text-danger hover:underline font-medium"
-                    >
-                      {self ? "Leave" : "Remove"}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {viewerRole === "owner" && !self && (
+                        <button
+                          type="button"
+                          disabled={isResetting}
+                          onClick={() => {
+                            if (!confirm(`Send a password reset email to ${m.user.email}?`)) return;
+                            resetPasswordMut.mutate(m.user.id, {
+                              onSuccess: () => setInfo(`Reset link sent to ${m.user.email}.`),
+                              onError: (e) => setInfo((e as Error).message),
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 text-xs text-muted hover:text-ink hover:underline font-medium"
+                        >
+                          {isResetting
+                            ? <><Loader2 className="size-3 animate-spin" /> Sending…</>
+                            : <><KeyRound className="size-3" strokeWidth={1.75} /> Reset pw</>
+                          }
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeMember(m.user.id, self)}
+                        className="text-xs text-danger hover:underline font-medium"
+                      >
+                        {self ? "Leave" : "Remove"}
+                      </button>
+                    </div>
                   )
                 }
               />
