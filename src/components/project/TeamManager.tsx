@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { INVITABLE_ROLES, ROLE_LABELS, ROLE_DESCRIPTIONS, type ProjectRole } from "@/lib/permissions";
 import { useInvitesList, useSendInvite, useRevokeInvite, useRemoveMember, useResetMemberPassword } from "@/lib/api/hooks";
 import { ClientPager } from "@/components/ui/ClientPager";
-import { Send, Copy, Loader2, Crown, KeyRound } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Send, Copy, Loader2, Crown, Mail } from "lucide-react";
 
 interface UserLite {
   id: string;
@@ -46,6 +47,7 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Exclude<ProjectRole, "owner">>("viewer");
   const [info, setInfo] = useState("");
+  const [resetTarget, setResetTarget] = useState<{ userId: string; email: string } | null>(null);
 
   function invite(e: React.FormEvent) {
     e.preventDefault();
@@ -79,6 +81,34 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
   }
 
   return (
+    <>
+    <ConfirmDialog
+      open={!!resetTarget}
+      title="Reset password"
+      description={
+        <>
+          A password reset link will be emailed to{" "}
+          <strong className="text-ink">{resetTarget?.email}</strong>. The link
+          expires in 1 hour.
+        </>
+      }
+      confirmLabel="Send reset link"
+      loading={resetPasswordMut.isPending}
+      onClose={() => setResetTarget(null)}
+      onConfirm={() => {
+        if (!resetTarget) return;
+        resetPasswordMut.mutate(resetTarget.userId, {
+          onSuccess: () => {
+            setInfo(`Reset link sent to ${resetTarget.email}.`);
+            setResetTarget(null);
+          },
+          onError: (e) => {
+            setInfo((e as Error).message);
+            setResetTarget(null);
+          },
+        });
+      }}
+    />
     <div className="space-y-6">
       {canManage && (
         <section className="panel overflow-hidden">
@@ -140,18 +170,12 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
                         <button
                           type="button"
                           disabled={isResetting}
-                          onClick={() => {
-                            if (!confirm(`Send a password reset email to ${m.user.email}?`)) return;
-                            resetPasswordMut.mutate(m.user.id, {
-                              onSuccess: () => setInfo(`Reset link sent to ${m.user.email}.`),
-                              onError: (e) => setInfo((e as Error).message),
-                            });
-                          }}
+                          onClick={() => setResetTarget({ userId: m.user.id, email: m.user.email })}
                           className="inline-flex items-center gap-1 text-xs text-muted hover:text-ink hover:underline font-medium"
                         >
                           {isResetting
                             ? <><Loader2 className="size-3 animate-spin" /> Sending…</>
-                            : <><KeyRound className="size-3" strokeWidth={1.75} /> Reset pw</>
+                            : <><Mail className="size-3" strokeWidth={1.75} /> Reset password</>
                           }
                         </button>
                       )}
@@ -214,6 +238,7 @@ export function TeamManager({ projectId, currentUserId, viewerRole, owner, membe
         </section>
       )}
     </div>
+    </>
   );
 }
 
