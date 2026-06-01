@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconPicker } from "./IconPicker";
 import type { BotIconKey } from "@/lib/bot-icons";
-import { Palette, SlidersHorizontal, UserPlus, Check, Loader2 } from "lucide-react";
+import { Palette, SlidersHorizontal, UserPlus, Check, Loader2, ShieldCheck } from "lucide-react";
 
 interface ProjectConfig {
   primaryColor: string;
@@ -25,6 +25,7 @@ interface ProjectConfig {
   leadCaptureEnabled: boolean;
   leadCaptureAfterMessages: number;
   leadCapturePrompt: string;
+  allowedDomains: string | null;
 }
 
 interface Props {
@@ -58,6 +59,7 @@ export function ConfigForm({ projectId, config, models }: Props) {
     leadCapturePrompt:
       config?.leadCapturePrompt ??
       "After helping the visitor, politely ask for their name, email, and phone number so a team member can follow up.",
+    allowedDomains: config?.allowedDomains ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -308,6 +310,37 @@ export function ConfigForm({ projectId, config, models }: Props) {
               disabled={!form.leadCaptureEnabled}
               className="textarea"
             />
+          </div>
+        </div>
+      </section>
+
+      {/* Embed & Security */}
+      <section className="panel overflow-hidden">
+        <div className="panel-head">
+          <div>
+            <h2 className="flex items-center gap-2.5 font-semibold text-ink">
+              <ShieldCheck className="size-4 text-ember" strokeWidth={1.75} />
+              Embed &amp; Security
+            </h2>
+            <p className="hint mt-1">Restrict which domains can load this widget. Leave blank to allow all origins.</p>
+          </div>
+        </div>
+        <div className="panel-pad space-y-4">
+          <div>
+            <label htmlFor="cfg-domains" className="label">Allowed origins</label>
+            <textarea
+              id="cfg-domains"
+              value={form.allowedDomains ?? ""}
+              onChange={(e) => set("allowedDomains", e.target.value)}
+              rows={3}
+              className="textarea font-mono text-[0.8125rem]"
+              placeholder={"https://example.com\nhttps://www.example.com"}
+            />
+            <p className="hint mt-1.5">
+              One origin per line or comma-separated. Must include scheme and host —
+              e.g. <span className="font-mono text-ink">https://example.com</span>.
+              No trailing slashes.
+            </p>
           </div>
         </div>
       </section>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { BOT_ICONS, isBotIconKey } from "@/lib/bot-icons";
+import { getAllowedOrigin } from "@/lib/domain-allowlist";
 
 export async function GET(req: NextRequest) {
   const apiKey = req.nextUrl.searchParams.get("apiKey");
@@ -13,9 +14,13 @@ export async function GET(req: NextRequest) {
   if (!project) return NextResponse.json({ error: "Invalid apiKey" }, { status: 401 });
   if (project.apiKeyRevokedAt) return NextResponse.json({ error: "API key revoked" }, { status: 403 });
 
-  // TODO(domain-allowlist): same Origin-header check as /api/chat.
-  // Config is fetched on widget init — blocking it here prevents the widget
-  // from loading at all on unlisted domains (fail-fast, no partial render).
+  const allowedOrigin = getAllowedOrigin(
+    project.config?.allowedDomains,
+    req.headers.get("origin") ?? req.headers.get("referer")
+  );
+  if (allowedOrigin === null) {
+    return NextResponse.json({ error: "Domain not allowed" }, { status: 403 });
+  }
 
   const c = project.config;
   const iconKey = c?.iconKey && isBotIconKey(c.iconKey) ? c.iconKey : "bot";
@@ -34,7 +39,7 @@ export async function GET(req: NextRequest) {
       iconKey,
       iconPath: BOT_ICONS[iconKey].path,
     },
-    { headers: { "Access-Control-Allow-Origin": "*" } }
+    { headers: { "Access-Control-Allow-Origin": allowedOrigin } }
   );
 }
 
