@@ -242,6 +242,13 @@ export function useRemoveMember(projectId: string) {
   });
 }
 
+export function useResetMemberPassword(projectId: string) {
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiSend(`/api/projects/${projectId}/members/${userId}/reset-password`, "POST"),
+  });
+}
+
 export function useCreateProject() {
   const qc = useQueryClient();
   return useMutation({
