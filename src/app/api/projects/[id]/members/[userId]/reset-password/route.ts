@@ -18,16 +18,20 @@ export async function POST(
     return NextResponse.json({ error: "Only the project owner can reset member passwords" }, { status: 403 });
   }
 
-  const [project, user] = await Promise.all([
+  const [project, membership] = await Promise.all([
     db.project.findUnique({ where: { id }, select: { name: true } }),
-    db.user.findUnique({ where: { id: userId }, select: { id: true, email: true, password: true } }),
+    db.projectMember.findUnique({
+      where: { projectId_userId: { projectId: id, userId } },
+      select: { user: { select: { id: true, email: true, password: true } } },
+    }),
   ]);
 
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  if (!user.password) {
-    return NextResponse.json({ error: "This user signs in via a social account — no password to reset" }, { status: 400 });
+  // Return the same shape whether the member doesn't exist or has no password — avoids enumeration.
+  if (!membership?.user?.password) {
+    return NextResponse.json({ sent: true });
   }
+  const user = membership.user;
 
   const identifier = `password-reset:${user.email}`;
   const token = randomBytes(32).toString("hex");
